@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>e-Tax Filing Designer</title>
+    <link rel="stylesheet" href="./styles/app.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <span class="brand-mark">E</span>
+          <div>
+            <strong>e-Tax Filing Designer</strong>
+            <span>令和8年仕様 プロトタイプ</span>
+          </div>
+        </div>
+
+        <nav class="tax-nav" id="taxNav" aria-label="税目"></nav>
+
+        <section class="panel">
+          <h2>仕様ソース</h2>
+          <p id="specMeta"></p>
+          <button class="secondary" id="loadSample">サンプル値を入れる</button>
+          <label class="file-button">
+            定義XMLを取込
+            <input id="definitionFile" type="file" accept=".xml,.xsd,.json" />
+          </label>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">XML構造設計書・帳票フィールド仕様書ベース</p>
+            <h1 id="formTitle"></h1>
+          </div>
+          <div class="actions">
+            <button id="validateButton">検証</button>
+            <button id="downloadXml">XML保存</button>
+          </div>
+        </header>
+
+        <section class="status-grid" id="statusGrid"></section>
+
+        <div class="content-grid">
+          <section class="form-area" aria-label="入力フォーム">
+            <div class="section-tabs" id="sectionTabs"></div>
+            <form id="filingForm"></form>
+          </section>
+
+          <section class="preview-area" aria-label="帳票プレビュー">
+            <div class="preview-toolbar">
+              <strong>帳票プレビュー</strong>
+              <span id="validationSummary">未検証</span>
+            </div>
+            <div class="paper" id="paperPreview"></div>
+            <pre class="xml-preview" id="xmlPreview"></pre>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <template id="fieldTemplate">
+      <label class="field">
+        <span class="field-label"></span>
+        <input />
+        <small></small>
+      </label>
+    </template>
+
+    <script type="module" src="./src/app.js"></script>
+  </body>
+</html>

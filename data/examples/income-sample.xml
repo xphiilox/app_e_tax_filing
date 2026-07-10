@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<IncomeTaxReturn xmlns="urn:etax:prototype:income-tax:r8">
+  <Taxpayer>
+    <Name>山田 太郎</Name>
+    <Kana>ヤマダ タロウ</Kana>
+    <UserId>1234567890123456</UserId>
+    <Address>東京都千代田区霞が関1-1-1</Address>
+    <Phone>0312345678</Phone>
+  </Taxpayer>
+  <Filing>
+    <Year>2026</Year>
+    <TaxOffice>麹町</TaxOffice>
+    <Date>2026-07-10</Date>
+  </Filing>
+  <Income>
+    <Salary>6200000</Salary>
+    <Business>0</Business>
+    <Misc>120000</Misc>
+  </Income>
+  <Deductions>
+    <SocialInsurance>820000</SocialInsurance>
+    <LifeInsurance>40000</LifeInsurance>
+    <Donation>30000</Donation>
+  </Deductions>
+</IncomeTaxReturn>
