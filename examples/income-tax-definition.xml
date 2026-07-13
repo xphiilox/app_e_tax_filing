@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<filingDefinition
+  title="所得税及び復興特別所得税の確定申告書"
+  rootElement="IncomeTaxReturn"
+  namespace="urn:example:etax:income-tax">
+  <section id="basic" label="本人・申告情報">
+    <field id="taxpayerName" label="氏名" path="Taxpayer/Name" type="text" required="true" />
+    <field id="taxpayerKana" label="フリガナ" path="Taxpayer/Kana" type="text" />
+    <field id="taxpayerNumber" label="個人番号" path="Taxpayer/IndividualNumber" type="text" pattern="^\d{12}$" hint="12桁の数字" />
+    <field id="address" label="住所" path="Taxpayer/Address" type="text" required="true" />
+    <field id="filingYear" label="申告年分" path="Filing/Year" type="number" required="true" value="2026" />
+    <field id="taxOffice" label="提出先税務署" path="Filing/TaxOffice" type="text" required="true" />
+    <field id="filingDate" label="提出日" path="Filing/Date" type="date" required="true" />
+  </section>
+  <section id="income" label="収入・所得">
+    <field id="salaryIncome" label="給与収入" path="Income/Salary" type="number" value="0" />
+    <field id="businessIncome" label="事業所得" path="Income/Business" type="number" value="0" />
+    <field id="miscIncome" label="雑所得" path="Income/Miscellaneous" type="number" value="0" />
+  </section>
+  <section id="deductions" label="所得控除">
+    <field id="socialInsurance" label="社会保険料控除" path="Deductions/SocialInsurance" type="number" value="0" />
+    <field id="lifeInsurance" label="生命保険料控除" path="Deductions/LifeInsurance" type="number" value="0" />
+    <field id="donation" label="寄附金控除" path="Deductions/Donation" type="number" value="0" />
+  </section>
+</filingDefinition>

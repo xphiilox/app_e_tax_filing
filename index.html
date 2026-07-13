@@ -22,18 +22,22 @@
         <section class="panel">
           <h2>仕様ソース</h2>
           <p id="specMeta"></p>
+          <button class="secondary" id="loadOfficialR07">令和7年申告書を表示</button>
           <button class="secondary" id="loadSample">サンプル値を入れる</button>
           <label class="file-button">
-            定義XMLを取込
+            構造定義XMLを読み込む
             <input id="definitionFile" type="file" accept=".xml,.xsd,.json" />
           </label>
+          <p class="file-help">定義XML・e-Tax XSD・入力済みXMLに対応</p>
+          <a class="sample-link" href="./examples/r07-income-tax-definition.xml" download>令和7年 帳票・XML構造定義</a>
+          <a class="sample-link" href="./assets/forms/r07-income-tax/KOA020-023.xsd" download>公式XSD KOA020 Ver23.0</a>
         </section>
       </aside>
 
       <main class="workspace">
         <header class="topbar">
           <div>
-            <p class="eyebrow">XML構造設計書・帳票フィールド仕様書ベース</p>
+            <p class="eyebrow">構造定義XMLから確定申告画面を自動生成</p>
             <h1 id="formTitle"></h1>
           </div>
           <div class="actions">
@@ -52,11 +56,20 @@
 
           <section class="preview-area" aria-label="帳票プレビュー">
             <div class="preview-toolbar">
-              <strong>帳票プレビュー</strong>
+              <div>
+                <strong>帳票プレビュー</strong>
+                <div class="page-tabs" id="pageTabs"></div>
+              </div>
               <span id="validationSummary">未検証</span>
             </div>
             <div class="paper" id="paperPreview"></div>
-            <pre class="xml-preview" id="xmlPreview"></pre>
+            <div class="xml-panel">
+              <div class="xml-toolbar">
+                <strong>XML</strong>
+                <button type="button" id="copyXml" aria-label="XMLをコピー">Copy</button>
+              </div>
+              <pre class="xml-preview" id="xmlPreview"></pre>
+            </div>
           </section>
         </div>
       </main>

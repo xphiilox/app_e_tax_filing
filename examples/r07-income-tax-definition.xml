@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<filingDefinition
+  title="令和7年分 所得税及び復興特別所得税の申告書"
+  taxType="income"
+  rootElement="KOA020"
+  namespace="http://xml.e-tax.nta.go.jp/XSD/shotoku"
+  version="23.0"
+  schema="e-taxall/19XMLスキーマ/shotoku/KOA020-023.xsd">
+  <layout>
+    <page number="1" label="第一表" image="./assets/forms/r07-income-tax/page-1.png" />
+    <page number="2" label="第二表" image="./assets/forms/r07-income-tax/page-2.png" />
+    <page number="3" label="第一表 控用" image="./assets/forms/r07-income-tax/page-3.png" />
+    <page number="4" label="第二表 控用" image="./assets/forms/r07-income-tax/page-4.png" />
+  </layout>
+
+  <section id="identity" label="本人・申告情報">
+    <field id="taxOffice" label="税務署名" path="KOA020-1/ABA00000/ABA00030" type="text" page="1" x="8.5" y="3.2" width="17.5" height="1.8" />
+    <field id="filingDate" label="提出年月日" path="KOA020-1/ABA00000/ABA00040" type="text" page="1" x="8.5" y="4.7" width="15.5" height="1.7" />
+    <field id="filingYear" label="年分" path="KOA020-1/ABA00000/ABA00010" type="number" value="7" page="1" x="31.0" y="4.0" width="5.2" height="2.0" align="center" />
+    <field id="postalCode" label="郵便番号" path="KOA020-1/ABA00000/ABA00080" type="text" pattern="^\d{7}$" hint="7桁の数字" page="1" x="14.5" y="6.6" width="19.8" height="2.0" />
+    <field id="individualNumber" label="個人番号" path="KOA020-1/ABA00000/ABA00125" type="text" pattern="^\d{12}$" hint="12桁の数字" page="1" x="40.0" y="6.6" width="28.5" height="2.0" />
+    <field id="birthDate" label="生年月日" path="KOA020-1/ABA00000/ABA00200" type="text" page="1" x="73.0" y="6.6" width="20.5" height="2.0" />
+    <field id="address" label="現在の住所" path="KOA020-1/ABA00000/ABA00090" type="text" required="true" page="1" x="14.5" y="9.0" width="39.5" height="5.0" align="left" />
+    <field id="taxpayerKana" label="フリガナ" path="KOA020-1/ABA00000/ABA00130" type="text" page="1" x="59.5" y="9.0" width="34.0" height="2.0" align="left" />
+    <field id="taxpayerName" label="氏名" path="KOA020-1/ABA00000/ABA00140" type="text" required="true" page="1" x="59.5" y="11.1" width="34.0" height="3.0" align="left" />
+    <field id="januaryAddress" label="1月1日の住所" path="KOA020-1/ABA00000/ABA00120" type="text" page="1" x="14.5" y="14.7" width="34.3" height="2.0" align="left" />
+    <field id="occupation" label="職業" path="KOA020-1/ABA00000/ABA00160" type="text" page="1" x="48.8" y="14.7" width="12.5" height="2.0" align="left" />
+    <field id="tradeName" label="屋号・雅号" path="KOA020-1/ABA00000/ABA00170" type="text" page="1" x="61.6" y="14.7" width="11.5" height="2.0" align="left" />
+    <field id="householder" label="世帯主の氏名" path="KOA020-1/ABA00000/ABA00180" type="text" page="1" x="73.2" y="14.7" width="12.4" height="2.0" align="left" />
+    <field id="relationship" label="世帯主との続柄" path="KOA020-1/ABA00000/ABA00190" type="text" page="1" x="85.7" y="14.7" width="8.0" height="2.0" align="left" />
+    <field id="phone" label="電話番号" path="KOA020-1/ABA00000/ABA00220" type="tel" page="1" x="75.0" y="16.9" width="18.5" height="1.9" />
+  </section>
+
+  <section id="income" label="収入金額等・所得金額等">
+    <field id="incomeBusiness" label="営業等収入" path="KOA020-1/ABB00000/ABB00030" type="number" page="1" x="28.6" y="19.35" width="21.8" height="2.1" />
+    <field id="incomeAgriculture" label="農業収入" path="KOA020-1/ABB00000/ABB00040" type="number" page="1" x="28.6" y="21.55" width="21.8" height="2.1" />
+    <field id="incomeRealEstate" label="不動産収入" path="KOA020-1/ABB00000/ABB00050" type="number" page="1" x="28.6" y="23.75" width="21.8" height="2.1" />
+    <field id="incomeDividend" label="配当収入" path="KOA020-1/ABB00000/ABB00070" type="number" page="1" x="28.6" y="25.95" width="21.8" height="2.1" />
+    <field id="incomeSalary" label="給与収入" path="KOA020-1/ABB00000/ABB00080" type="number" page="1" x="28.6" y="28.15" width="21.8" height="2.1" />
+    <field id="incomePension" label="公的年金等収入" path="KOA020-1/ABB00000/ABB00100" type="number" page="1" x="28.6" y="30.35" width="21.8" height="2.1" />
+    <field id="incomeMiscBusiness" label="雑・業務収入" path="KOA020-1/ABB00000/ABB00105" type="number" page="1" x="28.6" y="32.55" width="21.8" height="2.1" />
+    <field id="incomeMiscOther" label="雑・その他収入" path="KOA020-1/ABB00000/ABB00110" type="number" page="1" x="28.6" y="34.75" width="21.8" height="2.1" />
+    <field id="incomeTransferShort" label="総合譲渡・短期" path="KOA020-1/ABB00000/ABB00130" type="number" page="1" x="28.6" y="36.95" width="21.8" height="2.1" />
+    <field id="incomeTransferLong" label="総合譲渡・長期" path="KOA020-1/ABB00000/ABB00180" type="number" page="1" x="28.6" y="39.15" width="21.8" height="2.1" />
+    <field id="incomeTemporary" label="一時収入" path="KOA020-1/ABB00000/ABB00230" type="number" page="1" x="28.6" y="41.35" width="21.8" height="2.1" />
+
+    <field id="amountBusiness" label="営業等所得" path="KOA020-1/ABB00000/ABB00300" type="number" page="1" x="28.6" y="43.55" width="21.8" height="2.1" />
+    <field id="amountAgriculture" label="農業所得" path="KOA020-1/ABB00000/ABB00320" type="number" page="1" x="28.6" y="45.75" width="21.8" height="2.1" />
+    <field id="amountRealEstate" label="不動産所得" path="KOA020-1/ABB00000/ABB00340" type="number" page="1" x="28.6" y="47.95" width="21.8" height="2.1" />
+    <field id="amountInterest" label="利子所得" path="KOA020-1/ABB00000/ABB00350" type="number" page="1" x="28.6" y="50.15" width="21.8" height="2.1" />
+    <field id="amountDividend" label="配当所得" path="KOA020-1/ABB00000/ABB00360" type="number" page="1" x="28.6" y="52.35" width="21.8" height="2.1" />
+    <field id="amountSalary" label="給与所得" path="KOA020-1/ABB00000/ABB00370" type="number" page="1" x="28.6" y="54.55" width="21.8" height="2.1" />
+    <field id="amountPension" label="公的年金等所得" path="KOA020-1/ABB00000/ABB01060" type="number" page="1" x="28.6" y="56.75" width="21.8" height="2.1" />
+    <field id="amountMiscBusiness" label="雑・業務所得" path="KOA020-1/ABB00000/ABB01090" type="number" page="1" x="28.6" y="58.95" width="21.8" height="2.1" />
+    <field id="amountMiscOther" label="雑・その他所得" path="KOA020-1/ABB00000/ABB01120" type="number" page="1" x="28.6" y="61.15" width="21.8" height="2.1" />
+    <field id="amountMiscTotal" label="雑所得計" path="KOA020-1/ABB00000/ABB01130" type="number" page="1" x="28.6" y="63.35" width="21.8" height="2.1" />
+    <field id="amountTransfer" label="総合譲渡・一時所得" path="KOA020-1/ABB00000/ABB00400" type="number" page="1" x="28.6" y="65.55" width="21.8" height="2.1" />
+    <field id="amountTotal" label="所得金額合計" path="KOA020-1/ABB00000/ABB00410" type="number" page="1" x="28.6" y="67.75" width="21.8" height="2.1" />
+  </section>
+
+  <section id="deductions" label="所得控除">
+    <field id="socialInsurance" label="社会保険料控除" path="KOA020-1/ABB00000/ABB00450" type="number" page="1" x="28.6" y="69.95" width="21.8" height="2.1" />
+    <field id="smallBusinessMutual" label="小規模企業共済等掛金控除" path="KOA020-1/ABB00000/ABB00460" type="number" page="1" x="28.6" y="72.15" width="21.8" height="2.1" />
+    <field id="lifeInsurance" label="生命保険料控除" path="KOA020-1/ABB00000/ABB00470" type="number" page="1" x="28.6" y="74.35" width="21.8" height="2.1" />
+    <field id="earthquakeInsurance" label="地震保険料控除" path="KOA020-1/ABB00000/ABB00480" type="number" page="1" x="28.6" y="76.55" width="21.8" height="2.1" />
+    <field id="widowSingleParent" label="寡婦・ひとり親控除" path="KOA020-1/ABB00000/ABB00500" type="number" page="1" x="28.6" y="78.75" width="21.8" height="2.1" />
+    <field id="studentDisability" label="勤労学生・障害者控除" path="KOA020-1/ABB00000/ABB00510" type="number" page="1" x="28.6" y="80.95" width="21.8" height="2.1" />
+    <field id="spouseDeduction" label="配偶者（特別）控除" path="KOA020-1/ABB00000/ABB00520" type="number" page="1" x="28.6" y="83.15" width="21.8" height="2.1" />
+    <field id="dependentDeduction" label="扶養控除" path="KOA020-1/ABB00000/ABB00540" type="number" page="1" x="28.6" y="85.35" width="21.8" height="2.1" />
+    <field id="specificRelativeDeduction" label="特定親族特別控除" path="KOA020-1/ABB00000/ABB00548" type="number" page="1" x="28.6" y="87.55" width="21.8" height="2.1" />
+    <field id="basicDeduction" label="基礎控除" path="KOA020-1/ABB00000/ABB00550" type="number" page="1" x="28.6" y="89.75" width="21.8" height="2.1" />
+    <field id="regularDeductionsTotal" label="所得控除小計" path="KOA020-1/ABB00000/ABB00555" type="number" page="1" x="28.6" y="91.95" width="21.8" height="2.1" />
+    <field id="casualtyDeduction" label="雑損控除" path="KOA020-1/ABB00000/ABB00430" type="number" page="1" x="28.6" y="94.15" width="21.8" height="2.1" />
+    <field id="medicalDeduction" label="医療費控除" path="KOA020-1/ABB00000/ABB00440" type="number" page="1" x="28.6" y="96.35" width="21.8" height="2.1" />
+    <field id="donationDeduction" label="寄附金控除" path="KOA020-1/ABB00000/ABB00490" type="number" page="1" x="28.6" y="98.05" width="21.8" height="1.7" />
+  </section>
+
+  <section id="tax" label="税金の計算・その他">
+    <field id="taxableIncome" label="課税される所得金額" path="KOA020-1/ABB00000/ABB00580" type="number" page="1" x="71.8" y="19.35" width="22.2" height="2.1" />
+    <field id="incomeTax" label="課税所得に対する税額" path="KOA020-1/ABB00000/ABB00590" type="number" page="1" x="71.8" y="21.55" width="22.2" height="2.1" />
+    <field id="dividendCredit" label="配当控除" path="KOA020-1/ABB00000/ABB00600" type="number" page="1" x="71.8" y="23.75" width="22.2" height="2.1" />
+    <field id="otherTaxCredit" label="その他の税額控除" path="KOA020-1/ABB00000/ABB00640" type="number" page="1" x="71.8" y="25.95" width="22.2" height="2.1" />
+    <field id="housingCredit" label="住宅借入金等特別控除" path="KOA020-1/ABB00000/ABB00650" type="number" page="1" x="71.8" y="28.15" width="22.2" height="2.1" />
+    <field id="politicalDonationCredit" label="政党等寄附金等特別控除" path="KOA020-1/ABB00000/ABB00660" type="number" page="1" x="71.8" y="30.35" width="22.2" height="2.1" />
+    <field id="renovationCredit" label="住宅耐震改修特別控除等" path="KOA020-1/ABB00000/ABB00663" type="number" page="1" x="71.8" y="32.55" width="22.2" height="2.1" />
+    <field id="netIncomeTax" label="差引所得税額" path="KOA020-1/ABB00000/ABB00670" type="number" page="1" x="71.8" y="34.75" width="22.2" height="2.1" />
+    <field id="disasterReduction" label="災害減免額" path="KOA020-1/ABB00000/ABB00680" type="number" page="1" x="71.8" y="36.95" width="22.2" height="2.1" />
+    <field id="recalculatedTax" label="再差引所得税額" path="KOA020-1/ABB00000/ABB01010" type="number" page="1" x="71.8" y="39.15" width="22.2" height="2.1" />
+    <field id="reconstructionTax" label="復興特別所得税額" path="KOA020-1/ABB00000/ABB01020" type="number" page="1" x="71.8" y="41.35" width="22.2" height="2.1" />
+    <field id="totalIncomeTax" label="所得税等の額" path="KOA020-1/ABB00000/ABB01030" type="number" page="1" x="71.8" y="43.55" width="22.2" height="2.1" />
+    <field id="foreignTaxCredit" label="外国税額控除等" path="KOA020-1/ABB00000/ABB01040" type="number" page="1" x="71.8" y="45.75" width="22.2" height="2.1" />
+    <field id="withholdingTax" label="源泉徴収税額" path="KOA020-1/ABB00000/ABB00710" type="number" page="1" x="71.8" y="47.95" width="22.2" height="2.1" />
+    <field id="declaredTax" label="申告納税額" path="KOA020-1/ABB00000/ABB00720" type="number" page="1" x="71.8" y="50.15" width="22.2" height="2.1" />
+    <field id="estimatedTax" label="予定納税額" path="KOA020-1/ABB00000/ABB00730" type="number" page="1" x="71.8" y="52.35" width="22.2" height="2.1" />
+    <field id="taxPayable" label="納める税金" path="KOA020-1/ABB00000/ABB00750" type="number" page="1" x="71.8" y="54.55" width="22.2" height="2.1" />
+    <field id="taxRefund" label="還付される税金" path="KOA020-1/ABB00000/ABB00760" type="number" page="1" x="71.8" y="56.75" width="22.2" height="2.1" />
+    <field id="preCorrectionTax" label="修正前の第3期分の税額" path="KOA020-1/ABB00000/ABB00765" type="number" page="1" x="71.8" y="58.95" width="22.2" height="2.1" />
+    <field id="taxIncrease" label="第3期分の税額の増加額" path="KOA020-1/ABB00000/ABB00767" type="number" page="1" x="71.8" y="61.15" width="22.2" height="2.1" />
+    <field id="incomeOtherThanPension" label="公的年金等以外の合計所得金額" path="KOA020-1/ABB00000/ABB00775" type="number" page="1" x="71.8" y="63.35" width="22.2" height="2.1" />
+    <field id="spouseIncome" label="配偶者の合計所得金額" path="KOA020-1/ABB00000/ABB00780" type="number" page="1" x="71.8" y="65.55" width="22.2" height="2.1" />
+    <field id="familyEmployeeSalary" label="専従者給与等合計" path="KOA020-1/ABB00000/ABB00790" type="number" page="1" x="71.8" y="67.75" width="22.2" height="2.1" />
+    <field id="blueReturnDeduction" label="青色申告特別控除額" path="KOA020-1/ABB00000/ABB00800" type="number" page="1" x="71.8" y="69.95" width="22.2" height="2.1" />
+    <field id="miscWithholdingTotal" label="雑所得等の源泉徴収税額合計" path="KOA020-1/ABB00000/ABB00810" type="number" page="1" x="71.8" y="72.15" width="22.2" height="2.1" />
+    <field id="unpaidWithholding" label="未納付の源泉徴収税額" path="KOA020-1/ABB00000/ABB00820" type="number" page="1" x="71.8" y="74.35" width="22.2" height="2.1" />
+    <field id="carriedLoss" label="繰越損失額" path="KOA020-1/ABB00000/ABB00830" type="number" page="1" x="71.8" y="76.55" width="22.2" height="2.1" />
+    <field id="averageTaxIncome" label="平均課税対象金額" path="KOA020-1/ABB00000/ABB00840" type="number" page="1" x="71.8" y="78.75" width="22.2" height="2.1" />
+    <field id="variableIncome" label="変動・臨時所得金額" path="KOA020-1/ABB00000/ABB00870" type="number" page="1" x="71.8" y="80.95" width="22.2" height="2.1" />
+    <field id="paymentByDueDate" label="申告期限までに納付する金額" path="KOA020-1/ABB00000/ABB00890" type="number" page="1" x="71.8" y="83.15" width="22.2" height="2.1" />
+    <field id="deferredPayment" label="延納届出額" path="KOA020-1/ABB00000/ABB00900" type="number" page="1" x="71.8" y="85.35" width="22.2" height="2.1" />
+  </section>
+
+  <section id="details" label="第二表">
+    <field id="addressSecond" label="住所（第二表）" path="KOA020-2/ABC00000/ABC00040" type="text" page="2" x="17.0" y="14.5" width="34.0" height="3.0" align="left" />
+    <field id="tradeNameSecond" label="屋号（第二表）" path="KOA020-2/ABC00000/ABC00050" type="text" page="2" x="17.0" y="17.8" width="34.0" height="2.0" align="left" />
+    <field id="kanaSecond" label="フリガナ（第二表）" path="KOA020-2/ABC00000/ABC00060" type="text" page="2" x="17.0" y="20.3" width="34.0" height="2.0" align="left" />
+    <field id="nameSecond" label="氏名（第二表）" path="KOA020-2/ABC00000/ABC00070" type="text" page="2" x="17.0" y="22.3" width="34.0" height="2.2" align="left" />
+    <field id="withholdingBreakdownIncome" label="所得の内訳・収入金額" path="KOA020-2/ABD00000/ABD00050" type="number" page="2" x="34.4" y="29.5" width="8.7" height="3.0" />
+    <field id="withholdingBreakdownTax" label="所得の内訳・源泉徴収税額" path="KOA020-2/ABD00000/ABD00060" type="number" page="2" x="43.1" y="29.5" width="8.6" height="3.0" />
+    <field id="withholdingTotalSecond" label="源泉徴収税額の合計額" path="KOA020-2/ABD00000/ABD00100" type="number" page="2" x="42.0" y="40.7" width="9.7" height="2.5" />
+    <field id="donationAmountSecond" label="寄附金" path="KOA020-2/ABJ00000/ABJ00040" type="number" page="2" x="79.5" y="46.0" width="17.5" height="3.0" />
+  </section>
+</filingDefinition>
