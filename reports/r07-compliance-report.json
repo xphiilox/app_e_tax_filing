@@ -1,0 +1,51 @@
+{
+  "specification": "所得税申告 KOA020 Ver23.0 / RKO0010 Ver25.0.0",
+  "generatedAt": "2026-07-14T02:59:22.753Z",
+  "result": "pass",
+  "unverifiedItems": 0,
+  "results": {
+    "metadata": {
+      "sourceRows": 788,
+      "expandedFields": 894,
+      "uniqueTags": 719,
+      "inputChecks": 278,
+      "calculations": 70,
+      "ranges": 277,
+      "crossChecks": 12,
+      "pages": 8,
+      "status": "pass"
+    },
+    "xsd": {
+      "uniqueTagCases": 719,
+      "repeatedTagCases": 47,
+      "compoundCases": 36,
+      "totalCases": 766,
+      "status": "pass"
+    },
+    "validation": {
+      "inputCheckRows": 278,
+      "rangeRows": 277,
+      "boundaryCases": 328,
+      "formatRows": 580,
+      "formatCases": 580,
+      "taxOfficeLookupCase": 1,
+      "status": "pass"
+    },
+    "calculation": {
+      "formulas": 70,
+      "cases": 70,
+      "status": "pass"
+    },
+    "correlation": {
+      "specificationRules": 12,
+      "rejectedCases": 12,
+      "status": "pass"
+    },
+    "supplement": {
+      "missingRequiredCases": 7,
+      "tez310Generated": true,
+      "xsdValid": true,
+      "status": "pass"
+    }
+  }
+}

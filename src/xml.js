@@ -1,3 +1,5 @@
+import { buildOfficialR07Xml, isOfficialR07Definition } from "./official-r07.js";
+
 export function escapeXml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -8,6 +10,9 @@ export function escapeXml(value) {
 }
 
 export function buildXml(definition, values) {
+  if (isOfficialR07Definition(definition)) {
+    return buildOfficialR07Xml(definition, values);
+  }
   const tree = {};
   definition.sections.flatMap((section) => section.fields).forEach((field) => {
     const parts = field.xmlPath.split("/").filter(Boolean);
@@ -73,8 +78,9 @@ function definitionFromFilingXml(root) {
     pages: directChildren(layoutNode, "page").map((page, index) => ({
       number: Number(page.getAttribute("number")) || index + 1,
       label: page.getAttribute("label") || `第${index + 1}頁`,
-      image: page.getAttribute("image")
-    })).filter((page) => page.image)
+      renderer: page.getAttribute("renderer") || (page.getAttribute("template") || page.getAttribute("image") ? "asset" : "html"),
+      template: page.getAttribute("template") || page.getAttribute("image") || ""
+    })).filter((page) => page.renderer === "html" || page.template)
   } : null;
   const sections = directChildren(root, "section").map((section, sectionIndex) => ({
     id: section.getAttribute("id") || `section-${sectionIndex + 1}`,
@@ -115,6 +121,8 @@ function definitionFromFilingXml(root) {
     rootElement: root.getAttribute("rootElement") || "TaxReturn",
     namespace: root.getAttribute("namespace") || "",
     version: root.getAttribute("version") || "",
+    procedure: root.getAttribute("procedure") || "",
+    procedureVersion: root.getAttribute("procedureVersion") || "",
     schema: root.getAttribute("schema") || "",
     layout,
     sections: populatedSections

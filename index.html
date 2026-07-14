@@ -37,11 +37,13 @@
       <main class="workspace">
         <header class="topbar">
           <div>
-            <p class="eyebrow">構造定義XMLから確定申告画面を自動生成</p>
+            <p class="eyebrow">構造定義XMLから直接入力できる確定申告帳票を自動生成</p>
             <h1 id="formTitle"></h1>
           </div>
           <div class="actions">
-            <button id="validateButton">検証</button>
+            <button id="validateButton">入力チェック</button>
+            <button id="xsdValidateButton">XSD検証</button>
+            <button id="downloadPdf">PDF保存</button>
             <button id="downloadXml">XML保存</button>
           </div>
         </header>
@@ -49,24 +51,41 @@
         <section class="status-grid" id="statusGrid"></section>
 
         <div class="content-grid">
-          <section class="form-area" aria-label="入力フォーム">
-            <div class="section-tabs" id="sectionTabs"></div>
-            <form id="filingForm"></form>
-          </section>
-
-          <section class="preview-area" aria-label="帳票プレビュー">
+          <section class="preview-area" aria-label="帳票入力・プレビュー">
             <div class="preview-toolbar">
               <div>
-                <strong>帳票プレビュー</strong>
+                <strong>帳票入力・プレビュー</strong>
                 <div class="page-tabs" id="pageTabs"></div>
               </div>
               <span id="validationSummary">未検証</span>
             </div>
             <div class="paper" id="paperPreview"></div>
+            <details class="layout-editor" id="layoutEditor" open>
+              <summary>
+                <span><strong>HTML / CSS / JavaScript レイアウト</strong><small id="layoutEditorPage"></small></span>
+                <span class="editor-state" id="layoutEditorStatus">反映済み</span>
+              </summary>
+              <div class="layout-editor-toolbar">
+                <label><input type="checkbox" id="autoApplyLayout" checked> 入力中に自動反映</label>
+                <div>
+                  <button type="button" class="secondary compact" id="resetLayoutSource">初期HTMLに戻す</button>
+                  <button type="button" class="compact" id="applyLayoutSource">プレビューへ適用</button>
+                </div>
+              </div>
+              <textarea id="layoutSource" spellcheck="false" aria-label="帳票レイアウトのHTML CSS JavaScriptソース"></textarea>
+              <p class="layout-editor-help"><code>data-etax-field="フィールドID"</code> または <code>data-etax-path="XMLパス"</code> の要素はXMLと双方向同期します。JavaScriptでは <code>window.etax.value()</code> と <code>window.etax.update()</code> を利用できます。</p>
+            </details>
             <div class="xml-panel">
               <div class="xml-toolbar">
-                <strong>XML</strong>
+                <div>
+                  <strong>正式e-Tax XML</strong>
+                  <span>RKO0010 25.0.0 / KOA020 23.0</span>
+                </div>
                 <button type="button" id="copyXml" aria-label="XMLをコピー">Copy</button>
+              </div>
+              <div class="xsd-result" id="xsdResult" role="status" aria-live="polite">
+                <strong>公式XSD: 未検証</strong>
+                <p>「XSD検証」で出力XMLを国税庁の手続ルートXSDに照合します。</p>
               </div>
               <pre class="xml-preview" id="xmlPreview"></pre>
             </div>
@@ -74,14 +93,6 @@
         </div>
       </main>
     </div>
-
-    <template id="fieldTemplate">
-      <label class="field">
-        <span class="field-label"></span>
-        <input />
-        <small></small>
-      </label>
-    </template>
 
     <script type="module" src="./src/app.js"></script>
   </body>

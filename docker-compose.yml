@@ -5,3 +5,16 @@ services:
       - "8080:80"
     volumes:
       - .:/usr/share/nginx/html:ro
+    depends_on:
+      validator:
+        condition: service_healthy
+
+  validator:
+    build:
+      context: .
+      dockerfile: Dockerfile.validator
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health')"]
+      interval: 5s
+      timeout: 3s
+      retries: 10

@@ -1,5 +1,12 @@
 import { formDefinitions, officialSpecs } from "./specs.js";
 import { buildXml, definitionFromXml } from "./xml.js";
+import { createDefaultHtmlTemplate, createHtmlPreviewDocument } from "./html-renderer.js";
+import {
+  calculateOfficialFields,
+  enhanceOfficialR07Definition,
+  synchronizeOfficialValues,
+  validateOfficialFields
+} from "./official-r07-compliance.js";
 
 const state = {
   activeTaxType: "income",
@@ -8,19 +15,26 @@ const state = {
   values: {},
   customDefinition: null,
   importedFileName: "",
-  validation: []
+  validation: [],
+  xsdValidation: { status: "idle", errors: [] },
+  layoutSources: new Map()
 };
 
 const taxNav = document.querySelector("#taxNav");
 const specMeta = document.querySelector("#specMeta");
 const formTitle = document.querySelector("#formTitle");
-const sectionTabs = document.querySelector("#sectionTabs");
-const filingForm = document.querySelector("#filingForm");
 const paperPreview = document.querySelector("#paperPreview");
 const xmlPreview = document.querySelector("#xmlPreview");
 const statusGrid = document.querySelector("#statusGrid");
 const validationSummary = document.querySelector("#validationSummary");
 const pageTabs = document.querySelector("#pageTabs");
+const xsdResult = document.querySelector("#xsdResult");
+const layoutEditor = document.querySelector("#layoutEditor");
+const layoutEditorPage = document.querySelector("#layoutEditorPage");
+const layoutEditorStatus = document.querySelector("#layoutEditorStatus");
+const layoutSource = document.querySelector("#layoutSource");
+const autoApplyLayout = document.querySelector("#autoApplyLayout");
+let layoutApplyTimer;
 
 function getDefinition() {
   return state.customDefinition || formDefinitions[state.activeTaxType];
@@ -37,12 +51,18 @@ async function init() {
   document.querySelector("#loadOfficialR07").addEventListener("click", loadOfficialR07);
   document.querySelector("#loadSample").addEventListener("click", loadSample);
   document.querySelector("#downloadXml").addEventListener("click", downloadXml);
+  document.querySelector("#downloadPdf").addEventListener("click", printCurrentPaper);
   document.querySelector("#copyXml").addEventListener("click", copyXml);
+  document.querySelector("#xsdValidateButton").addEventListener("click", validateXsd);
+  document.querySelector("#applyLayoutSource").addEventListener("click", applyLayoutSource);
+  document.querySelector("#resetLayoutSource").addEventListener("click", resetLayoutSource);
+  layoutSource.addEventListener("input", handleLayoutSourceInput);
   document.querySelector("#validateButton").addEventListener("click", () => {
     validate();
     render();
   });
   document.querySelector("#definitionFile").addEventListener("change", importDefinition);
+  window.addEventListener("message", handlePreviewMessage);
   await loadOfficialR07();
 }
 
@@ -55,6 +75,7 @@ function hydrateDefaults() {
     });
   });
   state.values.filingDate ||= new Date().toISOString().slice(0, 10);
+  state.values.creationDate ||= new Date().toISOString().slice(0, 10);
 }
 
 function renderNav() {
@@ -90,12 +111,12 @@ function render() {
     : `<strong>${escapeHtml(state.importedFileName)}</strong><br>${sourceLabel(definition.sourceType)}から生成した帳票を表示中`;
 
   renderStatus(definition);
-  renderTabs(definition);
   renderPageTabs(definition);
-  renderForm(definition);
   renderPaper(definition);
+  renderLayoutEditor(definition);
   renderXml(definition);
   renderValidation();
+  renderXsdValidation();
 }
 
 function renderStatus(definition) {
@@ -105,27 +126,8 @@ function renderStatus(definition) {
     <article><span>読込元</span><strong>${definition.sourceType ? escapeHtml(sourceLabel(definition.sourceType)) : "項番9-13"}</strong></article>
     <article><span>入力項目</span><strong>${filledCount}/${getFields(definition).length}</strong></article>
     <article><span>必須項目</span><strong>${requiredCount}</strong></article>
-    <article><span>出力形式</span><strong>XML</strong></article>
+    <article><span>準拠仕様</span><strong>${definition.specCounts ? `全${definition.specCounts.sourceRows}行` : "XML"}</strong></article>
   `;
-}
-
-function renderTabs(definition) {
-  if (!definition.sections.some((section) => section.id === state.activeSection)) {
-    state.activeSection = definition.sections[0].id;
-  }
-
-  sectionTabs.innerHTML = "";
-  definition.sections.forEach((section) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = section.id === state.activeSection ? "active" : "";
-    button.textContent = section.label;
-    button.addEventListener("click", () => {
-      state.activeSection = section.id;
-      render();
-    });
-    sectionTabs.append(button);
-  });
 }
 
 function renderPageTabs(definition) {
@@ -141,34 +143,9 @@ function renderPageTabs(definition) {
       state.activePage = page.number;
       renderPageTabs(definition);
       renderPaper(definition);
+      renderLayoutEditor(definition);
     });
     pageTabs.append(button);
-  });
-}
-
-function renderForm(definition) {
-  const template = document.querySelector("#fieldTemplate");
-  const section = definition.sections.find((entry) => entry.id === state.activeSection) || definition.sections[0];
-  filingForm.innerHTML = "";
-
-  section.fields.forEach((field) => {
-    const node = template.content.cloneNode(true);
-    const label = node.querySelector(".field-label");
-    const input = node.querySelector("input");
-    const hint = node.querySelector("small");
-    label.textContent = field.required ? `${field.label} *` : field.label;
-    input.name = field.id;
-    input.type = field.type || "text";
-    input.value = state.values[field.id] ?? field.value ?? "";
-    input.required = Boolean(field.required);
-    if (field.pattern) input.pattern = field.pattern;
-    hint.textContent = field.hint || field.xmlPath;
-    input.addEventListener("input", (event) => {
-      state.values[field.id] = event.target.value;
-      renderPaper(definition);
-      renderXml(definition);
-    });
-    filingForm.append(node);
   });
 }
 
@@ -202,32 +179,104 @@ function renderPaper(definition) {
 function renderOfficialPaper(definition) {
   const page = definition.layout.pages.find((entry) => entry.number === state.activePage) || definition.layout.pages[0];
   state.activePage = page.number;
-  const fields = getFields(definition).filter((field) => field.page === page.number && field.position);
-  const controls = fields.map((field) => {
-    const position = field.position;
-    const value = state.values[field.id] ?? field.value ?? "";
-    const style = `left:${position.x}%;top:${position.y}%;width:${position.width}%;height:${position.height}%;text-align:${position.align}`;
-    return `<input class="paper-input" data-field-id="${escapeHtml(field.id)}" aria-label="${escapeHtml(field.label)}" title="${escapeHtml(field.label)}" type="${escapeHtml(field.type || "text")}" value="${escapeHtml(value)}" style="${style}">`;
-  }).join("");
-
+  const source = getLayoutSource(definition, page);
+  const previewDocument = createHtmlPreviewDocument(source, buildXml(definition, state.values), getFields(definition), state.values);
   paperPreview.className = "paper official-paper-shell";
   paperPreview.innerHTML = `
-    <div class="official-paper-page">
-      <img src="${escapeHtml(page.image)}" alt="${escapeHtml(`${definition.title} ${page.label}`)}">
-      ${controls}
-    </div>
+    <iframe class="html-paper-frame" title="${escapeHtml(`${definition.title} ${page.label}`)}" sandbox="allow-scripts allow-modals"></iframe>
+    <p class="xml-render-caption"><strong>帳票へ直接入力</strong> 水色の入力欄はe-Tax XMLへ即時同期されます。</p>
   `;
+  paperPreview.querySelector(".html-paper-frame").srcdoc = previewDocument;
+}
 
-  paperPreview.querySelectorAll(".paper-input").forEach((input) => {
-    input.addEventListener("input", (event) => {
-      state.values[event.target.dataset.fieldId] = event.target.value;
-      renderXml(definition);
-    });
-  });
+function renderLayoutEditor(definition) {
+  const page = definition.layout?.pages?.find((entry) => entry.number === state.activePage);
+  layoutEditor.hidden = !page;
+  if (!page) return;
+  layoutEditorPage.textContent = page.label;
+  layoutSource.value = getLayoutSource(definition, page);
+  setLayoutEditorStatus("反映済み", "applied");
+}
+
+function getLayoutSource(definition, page) {
+  const key = layoutSourceKey(definition, page);
+  if (!state.layoutSources.has(key)) {
+    state.layoutSources.set(key, createDefaultHtmlTemplate(definition, page));
+  }
+  return state.layoutSources.get(key);
+}
+
+function layoutSourceKey(definition, page) {
+  return `${definition.taxType}:${definition.version || "local"}:${page.number}`;
+}
+
+function handleLayoutSourceInput() {
+  const definition = getDefinition();
+  const page = definition.layout?.pages?.find((entry) => entry.number === state.activePage);
+  if (!page) return;
+  state.layoutSources.set(layoutSourceKey(definition, page), layoutSource.value);
+  setLayoutEditorStatus(autoApplyLayout.checked ? "自動反映待ち" : "未反映", "dirty");
+  window.clearTimeout(layoutApplyTimer);
+  if (autoApplyLayout.checked) {
+    layoutApplyTimer = window.setTimeout(() => {
+      renderOfficialPaper(definition);
+      setLayoutEditorStatus("反映済み", "applied");
+    }, 280);
+  }
+}
+
+function applyLayoutSource() {
+  const definition = getDefinition();
+  const page = definition.layout?.pages?.find((entry) => entry.number === state.activePage);
+  if (!page) return;
+  state.layoutSources.set(layoutSourceKey(definition, page), layoutSource.value);
+  renderOfficialPaper(definition);
+  setLayoutEditorStatus("反映済み", "applied");
+}
+
+function resetLayoutSource() {
+  const definition = getDefinition();
+  const page = definition.layout?.pages?.find((entry) => entry.number === state.activePage);
+  if (!page) return;
+  const source = createDefaultHtmlTemplate(definition, page);
+  state.layoutSources.set(layoutSourceKey(definition, page), source);
+  layoutSource.value = source;
+  renderOfficialPaper(definition);
+  setLayoutEditorStatus("初期HTMLを反映", "applied");
+}
+
+function setLayoutEditorStatus(message, status) {
+  layoutEditorStatus.textContent = message;
+  layoutEditorStatus.className = `editor-state ${status}`;
 }
 
 function renderXml(definition) {
   xmlPreview.textContent = buildXml(definition, state.values);
+}
+
+function handlePreviewMessage(event) {
+  const iframe = paperPreview.querySelector(".html-paper-frame");
+  if (!iframe || event.source !== iframe.contentWindow || event.data?.type !== "etax-field-change") return;
+  const field = getFields().find((entry) => entry.id === event.data.fieldId);
+  if (!field) return;
+  state.values[field.id] = String(event.data.value ?? "");
+  const calculated = calculateOfficialFields(getDefinition(), state.values);
+  if (Object.keys(calculated).length) iframe.contentWindow.postMessage({ type: "etax-values", values: calculated }, "*");
+  state.validation = [];
+  state.xsdValidation = { status: "idle", errors: [] };
+  renderStatus(getDefinition());
+  renderXml(getDefinition());
+  renderXsdValidation();
+  validationSummary.textContent = "XMLへ同期済み";
+  validationSummary.className = "ok";
+}
+
+function printCurrentPaper() {
+  const iframe = paperPreview.querySelector(".html-paper-frame");
+  if (!iframe) return;
+  validationSummary.textContent = "PDF保存画面を開いています";
+  validationSummary.className = "ok";
+  iframe.contentWindow.postMessage({ type: "etax-print" }, "*");
 }
 
 function formatValue(field, value) {
@@ -247,21 +296,91 @@ function validate() {
     }
     return [];
   });
+  state.validation.push(...validateOfficialFields(definition, state.values));
 }
 
 function renderValidation() {
   if (state.validation.length === 0) {
     validationSummary.textContent = "エラーなし";
     validationSummary.className = "ok";
+    validationSummary.removeAttribute("title");
     return;
   }
   validationSummary.textContent = `${state.validation.length}件の確認事項`;
   validationSummary.className = "error";
+  validationSummary.title = state.validation.join("\n");
+}
+
+async function validateXsd() {
+  validate();
+  renderValidation();
+  if (state.validation.length > 0) {
+    state.xsdValidation = { status: "error", errors: ["先に入力チェックの確認事項を修正してください。"] };
+    renderXsdValidation();
+    return;
+  }
+
+  state.xsdValidation = { status: "checking", errors: [] };
+  renderXsdValidation();
+  try {
+    const response = await fetch("/api/validate", {
+      method: "POST",
+      headers: { "Content-Type": "application/xml; charset=UTF-8" },
+      body: buildXml(getDefinition(), state.values)
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.errors?.[0] || "XSD検証サービスから応答がありません。");
+    state.xsdValidation = {
+      status: result.valid ? "valid" : "invalid",
+      errors: result.errors || [],
+      schema: result.schema
+    };
+  } catch (error) {
+    state.xsdValidation = {
+      status: "error",
+      errors: [`${error.message} Docker Composeで起動しているか確認してください。`]
+    };
+  }
+  renderXsdValidation();
+}
+
+function renderXsdValidation() {
+  const { status, errors, schema } = state.xsdValidation;
+  xsdResult.className = `xsd-result ${status}`;
+  xsdResult.innerHTML = "";
+  const title = document.createElement("strong");
+  title.textContent = {
+    idle: "公式XSD: 未検証",
+    checking: "公式XSD: 検証中…",
+    valid: "公式XSD: 適合",
+    invalid: "公式XSD: 不適合",
+    error: "公式XSD: 検証できません"
+  }[status] || "公式XSD: 未検証";
+  xsdResult.append(title);
+
+  if (status === "valid") {
+    const detail = document.createElement("p");
+    detail.textContent = `${schema || "RKO0010-250.xsd"} に適合しています。`;
+    xsdResult.append(detail);
+  } else if (errors.length > 0) {
+    const list = document.createElement("ol");
+    errors.forEach((error) => {
+      const item = document.createElement("li");
+      item.textContent = error;
+      list.append(item);
+    });
+    xsdResult.append(list);
+  } else {
+    const detail = document.createElement("p");
+    detail.textContent = "「XSD検証」で出力XMLを国税庁の手続ルートXSDに照合します。";
+    xsdResult.append(detail);
+  }
 }
 
 function loadSample() {
   Object.assign(state.values, {
     taxpayerName: "山田 太郎",
+    filingYear: "7",
     taxpayerKana: "ヤマダ タロウ",
     postalCode: "1000013",
     individualNumber: "123456789012",
@@ -275,6 +394,10 @@ function loadSample() {
     phone: "0312345678",
     taxOffice: "麹町",
     filingDate: "令和8年2月16日",
+    creationDate: new Date().toISOString().slice(0, 10),
+    softwareName: "e-Tax Filing Designer",
+    creatorName: "山田 太郎",
+    taxOfficeCode: "01101",
     incomeSalary: "6200000",
     amountSalary: "4520000",
     basicDeduction: "480000",
@@ -311,6 +434,7 @@ function loadSample() {
     withheldTax: "143000",
     people: "8"
   });
+  synchronizeOfficialValues(getDefinition(), state.values, true);
   validate();
   render();
 }
@@ -374,13 +498,14 @@ async function loadOfficialR07() {
   try {
     const response = await fetch("./examples/r07-income-tax-definition.xml");
     if (!response.ok) throw new Error("令和7年帳票定義を読み込めませんでした。");
-    applyDefinition(definitionFromXml(await response.text()), "令和7年 帳票・XML構造定義 / KOA020 Ver23.0");
+    applyDefinition(enhanceOfficialR07Definition(definitionFromXml(await response.text())), "令和7年 帳票・XML構造定義・帳票フィールド仕様 / KOA020 Ver23.0");
   } catch (error) {
     console.error(error);
   }
 }
 
 function applyDefinition(definition, fileName) {
+  definition = enhanceOfficialR07Definition(definition);
   assertDefinition(definition);
   state.customDefinition = definition;
   state.activeTaxType = definition.taxType === "imported" ? state.activeTaxType : definition.taxType;
@@ -390,7 +515,11 @@ function applyDefinition(definition, fileName) {
   definition.sections.flatMap((section) => section.fields).forEach((field) => {
     state.values[field.id] = field.value ?? "";
   });
+  state.values.creationDate ||= new Date().toISOString().slice(0, 10);
+  synchronizeOfficialValues(definition, state.values);
   state.validation = [];
+  state.xsdValidation = { status: "idle", errors: [] };
+  state.layoutSources = new Map();
   renderNav();
   render();
 }
