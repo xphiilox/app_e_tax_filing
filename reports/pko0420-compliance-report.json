@@ -1,0 +1,39 @@
+{
+  "specification": "所得税申請 PKO0420 Ver26.0.0 / KOZ280 Ver21.0",
+  "generatedAt": "2026-07-14T07:30:00+09:00",
+  "result": "pass",
+  "sources": {
+    "rootSchema": "PKO0420-260.xsd",
+    "structureWorkbook": "XML構造設計書(所得-申請)Ver21x.xlsx",
+    "fieldWorkbook": "帳票フィールド仕様書(所得-申請)Ver21x.xlsx"
+  },
+  "results": {
+    "metadata": {
+      "procedure": "PKO0420 26.0.0",
+      "form": "KOZ280 21.0",
+      "sourceRows": 114,
+      "expandedFields": 117,
+      "uniqueTags": 101,
+      "status": "pass"
+    },
+    "xsd": {
+      "sampleXml": "pass",
+      "allFieldsPopulatedXml": "pass",
+      "schema": "shotoku/PKO0420-260.xsd",
+      "transitiveSchemaFiles": 85,
+      "status": "pass"
+    },
+    "routing": {
+      "RKO0010": "shotoku/RKO0010-250.xsd",
+      "PKO0420": "shotoku/PKO0420-260.xsd",
+      "status": "pass"
+    },
+    "browser": {
+      "generatedXml": true,
+      "xsdResult": "適合",
+      "xmlEditRevalidatedBeforeRendering": true,
+      "formRendered": "KOZ280",
+      "status": "pass"
+    }
+  }
+}

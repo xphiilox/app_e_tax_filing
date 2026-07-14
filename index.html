@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>e-Tax Filing Designer</title>
-    <link rel="stylesheet" href="./styles/app.css" />
+    <link rel="stylesheet" href="./styles/app.css?v=20260714-designer1" />
   </head>
   <body>
     <div class="app-shell">
@@ -23,6 +23,7 @@
           <h2>仕様ソース</h2>
           <p id="specMeta"></p>
           <button class="secondary" id="loadOfficialR07">令和7年申告書を表示</button>
+          <button class="secondary" id="loadOfficialPko0420">予定納税額の減額申請書を表示</button>
           <button class="secondary" id="loadSample">サンプル値を入れる</button>
           <label class="file-button">
             構造定義XMLを読み込む
@@ -37,11 +38,13 @@
       <main class="workspace">
         <header class="topbar">
           <div>
-            <p class="eyebrow">構造定義XMLから確定申告画面を自動生成</p>
+            <p class="eyebrow">構造定義XMLから直接入力できる確定申告帳票を自動生成</p>
             <h1 id="formTitle"></h1>
           </div>
           <div class="actions">
-            <button id="validateButton">検証</button>
+            <button id="validateButton">入力チェック</button>
+            <button id="xsdValidateButton">XSD検証</button>
+            <button id="downloadPdf">PDF保存</button>
             <button id="downloadXml">XML保存</button>
           </div>
         </header>
@@ -49,40 +52,103 @@
         <section class="status-grid" id="statusGrid"></section>
 
         <div class="content-grid">
-          <section class="form-area" aria-label="入力フォーム">
-            <div class="section-tabs" id="sectionTabs"></div>
-            <form id="filingForm"></form>
-          </section>
-
-          <section class="preview-area" aria-label="帳票プレビュー">
+          <section class="preview-area" aria-label="帳票入力・プレビュー">
             <div class="preview-toolbar">
               <div>
-                <strong>帳票プレビュー</strong>
+                <strong>帳票入力・プレビュー</strong>
                 <div class="page-tabs" id="pageTabs"></div>
               </div>
               <span id="validationSummary">未検証</span>
             </div>
             <div class="paper" id="paperPreview"></div>
+            <details class="layout-editor" id="layoutEditor" open>
+              <summary>
+                <span><strong>HTML / CSS / JavaScript レイアウト</strong><small id="layoutEditorPage"></small></span>
+                <span class="editor-state" id="layoutEditorStatus">反映済み</span>
+              </summary>
+              <section class="visual-designer" aria-label="帳票デザイナー">
+                <div class="designer-toolbar" role="toolbar" aria-label="帳票部品">
+                  <strong>帳票デザイナー</strong>
+                  <button type="button" class="compact" data-designer-add="text">文字</button>
+                  <button type="button" class="compact" data-designer-add="field">入力部品</button>
+                  <button type="button" class="compact" data-designer-add="line">罫線</button>
+                  <button type="button" class="compact" data-designer-add="box">枠</button>
+                  <button type="button" class="secondary compact" id="duplicateDesignerItem">複製</button>
+                  <button type="button" class="secondary compact danger" id="deleteDesignerItem">削除</button>
+                  <button type="button" class="compact designer-apply" id="applyDesignerLayout">実行画面へ反映</button>
+                </div>
+                <div class="designer-workspace">
+                  <aside class="schema-panel">
+                    <label for="schemaSearch">XSD構造ツリー</label>
+                    <input id="schemaSearch" type="search" placeholder="タグ・XMLパスを検索">
+                    <div id="schemaTree" class="schema-tree" role="tree"></div>
+                  </aside>
+                  <div class="designer-stage" id="designerStage">
+                    <div class="designer-ruler horizontal">0　10　20　30　40　50　60　70　80　90　100　110　120　130　140　150　160　170　180　190　200</div>
+                    <div class="designer-canvas" id="designerCanvas" aria-label="A4帳票キャンバス"></div>
+                  </div>
+                  <aside class="property-panel" id="designerProperties">
+                    <h3>部品プロパティ</h3>
+                    <p id="designerEmptySelection">部品を選択してください。</p>
+                    <div id="designerPropertyFields" hidden>
+                      <label>表示文字<input id="designerText" type="text"></label>
+                      <div class="property-pair">
+                        <label>X (mm)<input id="designerX" type="number" step="0.1"></label>
+                        <label>Y (mm)<input id="designerY" type="number" step="0.1"></label>
+                      </div>
+                      <div class="property-pair">
+                        <label>幅 (mm)<input id="designerWidth" type="number" step="0.1" min="0.5"></label>
+                        <label>高さ (mm)<input id="designerHeight" type="number" step="0.1" min="0.5"></label>
+                      </div>
+                      <label>文字サイズ (pt)<input id="designerFontSize" type="number" step="0.5" min="4"></label>
+                      <label>XMLマッピング<select id="designerMapping"></select></label>
+                      <fieldset>
+                        <legend>計算・チェック制御</legend>
+                        <label>計算式<input id="designerCalculation" type="text" placeholder="fieldA + fieldB"></label>
+                        <label class="check-row"><input id="designerRequired" type="checkbox"> 必須入力</label>
+                        <div class="property-pair">
+                          <label>最小値<input id="designerMin" type="number"></label>
+                          <label>最大値<input id="designerMax" type="number"></label>
+                        </div>
+                        <label>正規表現<input id="designerPattern" type="text" placeholder="^\\d{1,10}$"></label>
+                        <label>エラーメッセージ<input id="designerMessage" type="text"></label>
+                      </fieldset>
+                    </div>
+                  </aside>
+                </div>
+              </section>
+              <div class="layout-editor-toolbar">
+                <label><input type="checkbox" id="autoApplyLayout" checked> 入力中に自動反映</label>
+                <div>
+                  <button type="button" class="secondary compact" id="resetLayoutSource">初期HTMLに戻す</button>
+                  <button type="button" class="compact" id="applyLayoutSource">プレビューへ適用</button>
+                </div>
+              </div>
+              <textarea id="layoutSource" spellcheck="false" aria-label="帳票レイアウトのHTML CSS JavaScriptソース"></textarea>
+              <p class="layout-editor-help"><code>data-etax-field="フィールドID"</code> または <code>data-etax-path="XMLパス"</code> の要素はXMLと双方向同期します。JavaScriptでは <code>window.etax.value()</code> と <code>window.etax.update()</code> を利用できます。</p>
+            </details>
             <div class="xml-panel">
               <div class="xml-toolbar">
-                <strong>XML</strong>
-                <button type="button" id="copyXml" aria-label="XMLをコピー">Copy</button>
+                <div>
+                  <strong>正式e-Tax XML</strong>
+                  <span id="xmlProcedureMeta">RKO0010 25.0.0 / KOA020 23.0</span>
+                </div>
+                <div class="xml-toolbar-actions">
+                  <button type="button" id="applyXmlToForm">XMLを帳票へ反映</button>
+                  <button type="button" id="copyXml" aria-label="XMLをコピー">Copy</button>
+                </div>
               </div>
-              <pre class="xml-preview" id="xmlPreview"></pre>
+              <div class="xsd-result" id="xsdResult" role="status" aria-live="polite">
+                <strong>公式XSD: 未検証</strong>
+                <p>「XSD検証」で出力XMLを国税庁の手続ルートXSDに照合します。</p>
+              </div>
+              <pre class="xml-preview" id="xmlPreview" contenteditable="true" spellcheck="false" aria-label="編集可能な正式e-Tax XML"></pre>
             </div>
           </section>
         </div>
       </main>
     </div>
 
-    <template id="fieldTemplate">
-      <label class="field">
-        <span class="field-label"></span>
-        <input />
-        <small></small>
-      </label>
-    </template>
-
-    <script type="module" src="./src/app.js"></script>
+    <script type="module" src="./src/app.js?v=20260714-designer1"></script>
   </body>
 </html>

@@ -1,0 +1,48 @@
+{
+  "specification": "国税庁 令和7年分 所得税及び復興特別所得税の申告書 01.pdf",
+  "referenceUrl": "https://www.nta.go.jp/taxes/shiraberu/shinkoku/yoshiki/01/shinkokusho/pdf/r07/01.pdf",
+  "result": "pass",
+  "referencePages": 4,
+  "uniqueReferenceLayouts": 2,
+  "implementedLayouts": [
+    "第一表",
+    "第二表"
+  ],
+  "renderer": "HTML/CSS/JavaScript",
+  "imageOrSvgDependency": false,
+  "visualInspection": {
+    "referenceRenderer": "macOS PDFKit",
+    "screenViewport": "794x1123 CSS px",
+    "printPage": "210x297 mm",
+    "checked": [
+      "用紙比率と余白",
+      "標題・様式番号・表番号",
+      "納税者情報区画",
+      "左右カラム比率",
+      "色帯と縦書き見出し",
+      "金額欄の桁枠",
+      "還付口座・整理欄",
+      "印刷時の入力背景除去"
+    ]
+  },
+  "pages": [
+    {
+      "page": 1,
+      "label": "申告書第一表",
+      "expectedFields": 141,
+      "renderedFields": 141,
+      "missingFields": 0,
+      "duplicateFields": 0,
+      "htmlOnly": true
+    },
+    {
+      "page": 2,
+      "label": "申告書第二表",
+      "expectedFields": 228,
+      "renderedFields": 228,
+      "missingFields": 0,
+      "duplicateFields": 0,
+      "htmlOnly": true
+    }
+  ]
+}
