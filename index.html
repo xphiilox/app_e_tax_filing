@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>e-Tax Filing Designer</title>
-    <link rel="stylesheet" href="./styles/app.css" />
+    <link rel="stylesheet" href="./styles/app.css?v=20260714-designer1" />
   </head>
   <body>
     <div class="app-shell">
@@ -66,6 +66,57 @@
                 <span><strong>HTML / CSS / JavaScript レイアウト</strong><small id="layoutEditorPage"></small></span>
                 <span class="editor-state" id="layoutEditorStatus">反映済み</span>
               </summary>
+              <section class="visual-designer" aria-label="帳票デザイナー">
+                <div class="designer-toolbar" role="toolbar" aria-label="帳票部品">
+                  <strong>帳票デザイナー</strong>
+                  <button type="button" class="compact" data-designer-add="text">文字</button>
+                  <button type="button" class="compact" data-designer-add="field">入力部品</button>
+                  <button type="button" class="compact" data-designer-add="line">罫線</button>
+                  <button type="button" class="compact" data-designer-add="box">枠</button>
+                  <button type="button" class="secondary compact" id="duplicateDesignerItem">複製</button>
+                  <button type="button" class="secondary compact danger" id="deleteDesignerItem">削除</button>
+                  <button type="button" class="compact designer-apply" id="applyDesignerLayout">実行画面へ反映</button>
+                </div>
+                <div class="designer-workspace">
+                  <aside class="schema-panel">
+                    <label for="schemaSearch">XSD構造ツリー</label>
+                    <input id="schemaSearch" type="search" placeholder="タグ・XMLパスを検索">
+                    <div id="schemaTree" class="schema-tree" role="tree"></div>
+                  </aside>
+                  <div class="designer-stage" id="designerStage">
+                    <div class="designer-ruler horizontal">0　10　20　30　40　50　60　70　80　90　100　110　120　130　140　150　160　170　180　190　200</div>
+                    <div class="designer-canvas" id="designerCanvas" aria-label="A4帳票キャンバス"></div>
+                  </div>
+                  <aside class="property-panel" id="designerProperties">
+                    <h3>部品プロパティ</h3>
+                    <p id="designerEmptySelection">部品を選択してください。</p>
+                    <div id="designerPropertyFields" hidden>
+                      <label>表示文字<input id="designerText" type="text"></label>
+                      <div class="property-pair">
+                        <label>X (mm)<input id="designerX" type="number" step="0.1"></label>
+                        <label>Y (mm)<input id="designerY" type="number" step="0.1"></label>
+                      </div>
+                      <div class="property-pair">
+                        <label>幅 (mm)<input id="designerWidth" type="number" step="0.1" min="0.5"></label>
+                        <label>高さ (mm)<input id="designerHeight" type="number" step="0.1" min="0.5"></label>
+                      </div>
+                      <label>文字サイズ (pt)<input id="designerFontSize" type="number" step="0.5" min="4"></label>
+                      <label>XMLマッピング<select id="designerMapping"></select></label>
+                      <fieldset>
+                        <legend>計算・チェック制御</legend>
+                        <label>計算式<input id="designerCalculation" type="text" placeholder="fieldA + fieldB"></label>
+                        <label class="check-row"><input id="designerRequired" type="checkbox"> 必須入力</label>
+                        <div class="property-pair">
+                          <label>最小値<input id="designerMin" type="number"></label>
+                          <label>最大値<input id="designerMax" type="number"></label>
+                        </div>
+                        <label>正規表現<input id="designerPattern" type="text" placeholder="^\\d{1,10}$"></label>
+                        <label>エラーメッセージ<input id="designerMessage" type="text"></label>
+                      </fieldset>
+                    </div>
+                  </aside>
+                </div>
+              </section>
               <div class="layout-editor-toolbar">
                 <label><input type="checkbox" id="autoApplyLayout" checked> 入力中に自動反映</label>
                 <div>
@@ -98,6 +149,6 @@
       </main>
     </div>
 
-    <script type="module" src="./src/app.js?v=20260714-pko0420"></script>
+    <script type="module" src="./src/app.js?v=20260714-designer1"></script>
   </body>
 </html>

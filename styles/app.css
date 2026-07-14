@@ -410,6 +410,246 @@ button.secondary.compact {
   font-size: 11px;
 }
 
+.visual-designer {
+  border-top: 1px solid var(--line);
+  background: #e9eff2;
+}
+
+.designer-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-height: 46px;
+  border-bottom: 1px solid #aebbc3;
+  background: #f6f8f9;
+  padding: 7px 10px;
+}
+
+.designer-toolbar strong {
+  margin-right: 8px;
+  font-size: 13px;
+}
+
+.designer-toolbar .designer-apply {
+  margin-left: auto;
+}
+
+button.danger {
+  border-color: #c77972;
+  color: var(--warn);
+}
+
+.designer-workspace {
+  display: grid;
+  grid-template-columns: 230px minmax(420px, 1fr) 250px;
+  min-height: 650px;
+  border-bottom: 1px solid #aebbc3;
+}
+
+.schema-panel,
+.property-panel {
+  min-width: 0;
+  background: #f8fafb;
+  padding: 10px;
+}
+
+.schema-panel {
+  border-right: 1px solid #aebbc3;
+}
+
+.property-panel {
+  border-left: 1px solid #aebbc3;
+}
+
+.schema-panel > label,
+.property-panel h3 {
+  display: block;
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+#schemaSearch,
+.property-panel input,
+.property-panel select {
+  width: 100%;
+  min-height: 30px;
+  border: 1px solid #aebbc3;
+  border-radius: 4px;
+  background: #fff;
+  padding: 4px 6px;
+  font-size: 11px;
+}
+
+.schema-tree {
+  max-height: 590px;
+  margin-top: 8px;
+  overflow: auto;
+  border: 1px solid #c5d0d6;
+  background: #fff;
+}
+
+.schema-node {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  border: 0;
+  border-bottom: 1px solid #edf1f3;
+  border-radius: 0;
+  background: #fff;
+  color: #26343b;
+  padding: 4px 6px;
+  text-align: left;
+  font: 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.schema-node:hover,
+.schema-node.mapped {
+  background: #dff3ef;
+  color: var(--accent-strong);
+}
+
+.schema-node span {
+  display: block;
+  overflow: hidden;
+  color: #63717a;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.designer-stage {
+  position: relative;
+  min-width: 0;
+  overflow: auto;
+  background: #cbd3d8;
+  padding: 28px 24px 30px;
+}
+
+.designer-ruler {
+  position: absolute;
+  top: 5px;
+  left: 24px;
+  width: 794px;
+  overflow: hidden;
+  color: #52616a;
+  font: 9px/1 ui-monospace, monospace;
+  white-space: nowrap;
+}
+
+.designer-canvas {
+  position: relative;
+  width: 210mm;
+  height: 297mm;
+  overflow: hidden;
+  background-color: #fff;
+  background-image: linear-gradient(#dce6ea 1px, transparent 1px), linear-gradient(90deg, #dce6ea 1px, transparent 1px);
+  background-size: 5mm 5mm;
+  box-shadow: 0 3px 14px #0004;
+  user-select: none;
+}
+
+.designer-item {
+  position: absolute;
+  display: flex;
+  min-width: 1mm;
+  min-height: 1mm;
+  align-items: center;
+  overflow: hidden;
+  color: #172026;
+  cursor: move;
+  font-family: "Yu Gothic", sans-serif;
+  white-space: pre-wrap;
+}
+
+.designer-item.field {
+  border: 1px solid #dc8f3c;
+  background: #fffdf4;
+  padding: 1mm;
+}
+
+.designer-item.text {
+  padding: .5mm;
+}
+
+.designer-item.line {
+  height: 1mm !important;
+  border-top: .35mm solid #172026;
+}
+
+.designer-item.box {
+  border: .35mm solid #172026;
+}
+
+.designer-item.selected {
+  overflow: visible;
+  outline: 2px solid #087d68;
+  outline-offset: 1px;
+}
+
+.designer-item .resize-handle {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  display: none;
+  width: 9px;
+  height: 9px;
+  border: 1px solid #fff;
+  background: #087d68;
+  cursor: nwse-resize;
+}
+
+.designer-item.selected .resize-handle {
+  display: block;
+}
+
+.property-panel h3 {
+  font-size: 13px;
+}
+
+.property-panel p {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+#designerPropertyFields > label,
+.property-panel fieldset label {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 8px;
+  color: #52616a;
+  font-size: 10px;
+}
+
+.property-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+}
+
+.property-panel fieldset {
+  margin: 12px 0 0;
+  border: 1px solid #b8c5cc;
+  padding: 8px;
+}
+
+.property-panel legend {
+  color: var(--accent-strong);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.property-panel .check-row {
+  display: flex;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.property-panel .check-row input {
+  width: auto;
+  min-height: 0;
+}
+
 #layoutSource {
   display: block;
   width: calc(100% - 24px);
@@ -606,6 +846,11 @@ td:last-child {
 
   .tax-nav {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .designer-workspace {
+    grid-template-columns: 190px minmax(420px, 1fr) 220px;
+    overflow-x: auto;
   }
 }
 

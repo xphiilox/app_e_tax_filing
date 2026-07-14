@@ -3,6 +3,7 @@ import { buildXml, definitionFromXml } from "./xml.js";
 import { createDefaultHtmlTemplate, createHtmlPreviewDocument } from "./html-renderer.js";
 import { detectSupportedOfficialForm, extractOfficialR07Values } from "./official-r07-xml-state.js";
 import { createOfficialPko0420Definition } from "./official-pko0420.js";
+import { cloneDesignerItem, compileDesignerTemplate, createDesignerItem } from "./form-designer.js?v=20260714-designer";
 import {
   calculateOfficialFields,
   enhanceOfficialR07Definition,
@@ -20,6 +21,9 @@ const state = {
   validation: [],
   xsdValidation: { status: "idle", errors: [] },
   layoutSources: new Map(),
+  designerLayouts: new Map(),
+  designerSelectedId: "",
+  designerDrag: null,
   xmlText: ""
 };
 
@@ -38,6 +42,18 @@ const layoutEditorPage = document.querySelector("#layoutEditorPage");
 const layoutEditorStatus = document.querySelector("#layoutEditorStatus");
 const layoutSource = document.querySelector("#layoutSource");
 const autoApplyLayout = document.querySelector("#autoApplyLayout");
+const designerCanvas = document.querySelector("#designerCanvas");
+const schemaTree = document.querySelector("#schemaTree");
+const schemaSearch = document.querySelector("#schemaSearch");
+const designerEmptySelection = document.querySelector("#designerEmptySelection");
+const designerPropertyFields = document.querySelector("#designerPropertyFields");
+const designerMapping = document.querySelector("#designerMapping");
+const designerPropertyInputs = {
+  text: document.querySelector("#designerText"), x: document.querySelector("#designerX"), y: document.querySelector("#designerY"),
+  width: document.querySelector("#designerWidth"), height: document.querySelector("#designerHeight"), fontSize: document.querySelector("#designerFontSize"),
+  calculation: document.querySelector("#designerCalculation"), required: document.querySelector("#designerRequired"), min: document.querySelector("#designerMin"),
+  max: document.querySelector("#designerMax"), pattern: document.querySelector("#designerPattern"), message: document.querySelector("#designerMessage")
+};
 let layoutApplyTimer;
 
 function getDefinition() {
@@ -72,6 +88,17 @@ async function init() {
   document.querySelector("#xsdValidateButton").addEventListener("click", validateXsd);
   document.querySelector("#applyLayoutSource").addEventListener("click", applyLayoutSource);
   document.querySelector("#resetLayoutSource").addEventListener("click", resetLayoutSource);
+  document.querySelectorAll("[data-designer-add]").forEach((button) => button.addEventListener("click", () => addDesignerItem(button.dataset.designerAdd)));
+  document.querySelector("#duplicateDesignerItem").addEventListener("click", duplicateDesignerItem);
+  document.querySelector("#deleteDesignerItem").addEventListener("click", deleteDesignerItem);
+  document.querySelector("#applyDesignerLayout").addEventListener("click", applyDesignerLayout);
+  schemaSearch.addEventListener("input", () => renderSchemaTree(getDefinition()));
+  schemaTree.addEventListener("click", handleSchemaTreeClick);
+  designerCanvas.addEventListener("pointerdown", handleDesignerPointerDown);
+  designerCanvas.addEventListener("pointermove", handleDesignerPointerMove);
+  designerCanvas.addEventListener("pointerup", handleDesignerPointerUp);
+  designerMapping.addEventListener("change", updateDesignerMapping);
+  Object.values(designerPropertyInputs).forEach((input) => input.addEventListener("input", updateDesignerProperties));
   layoutSource.addEventListener("input", handleLayoutSourceInput);
   document.querySelector("#validateButton").addEventListener("click", () => {
     validate();
@@ -214,6 +241,7 @@ function renderLayoutEditor(definition) {
   if (!page) return;
   layoutEditorPage.textContent = page.label;
   layoutSource.value = getLayoutSource(definition, page);
+  renderDesigner(definition, page);
   setLayoutEditorStatus("反映済み", "applied");
 }
 
@@ -227,6 +255,219 @@ function getLayoutSource(definition, page) {
 
 function layoutSourceKey(definition, page) {
   return `${definition.taxType}:${definition.version || "local"}:${page.number}`;
+}
+
+function getDesigner(definition = getDefinition(), page = definition.layout?.pages?.find((entry) => entry.number === state.activePage)) {
+  if (!page) return null;
+  const key = layoutSourceKey(definition, page);
+  if (!state.designerLayouts.has(key)) state.designerLayouts.set(key, { items: [] });
+  return state.designerLayouts.get(key);
+}
+
+function renderDesigner(definition = getDefinition(), page = definition.layout?.pages?.find((entry) => entry.number === state.activePage)) {
+  const design = getDesigner(definition, page);
+  if (!design) return;
+  if (!design.items.some((item) => item.id === state.designerSelectedId)) state.designerSelectedId = "";
+  designerCanvas.innerHTML = design.items.map((item) => {
+    const selected = item.id === state.designerSelectedId ? " selected" : "";
+    const mapped = item.fieldId ? getFields(definition).find((field) => field.id === item.fieldId) : null;
+    const text = item.type === "field" ? (item.text || mapped?.label || "入力項目") : item.text;
+    return `<div class="designer-item ${escapeHtml(item.type)}${selected}" data-designer-id="${escapeHtml(item.id)}" title="${escapeHtml(item.xmlPath || item.type)}" style="left:${designerNumber(item.x)}mm;top:${designerNumber(item.y)}mm;width:${designerNumber(item.width)}mm;height:${designerNumber(item.height)}mm;font-size:${designerNumber(item.fontSize)}pt">${escapeHtml(text)}<span class="resize-handle" data-designer-resize="true"></span></div>`;
+  }).join("");
+  renderSchemaTree(definition);
+  renderDesignerProperties(definition);
+}
+
+function renderSchemaTree(definition = getDefinition()) {
+  const query = schemaSearch.value.trim().toLowerCase();
+  const selected = getDesigner()?.items.find((item) => item.id === state.designerSelectedId);
+  const fields = getFields(definition).filter((field) => field.xmlPath && !field.xmlPath.startsWith("$control/"));
+  const unique = new Map(fields.map((field) => [`${field.id}:${field.xmlPath}`, field]));
+  schemaTree.innerHTML = [...unique.values()]
+    .filter((field) => !query || `${field.label} ${field.xmlPath} ${field.tag || ""}`.toLowerCase().includes(query))
+    .map((field) => {
+      const depth = Math.max(0, field.xmlPath.split("/").length - 1);
+      const mapped = selected?.fieldId === field.id ? " mapped" : "";
+      return `<button type="button" class="schema-node${mapped}" role="treeitem" data-schema-field="${escapeHtml(field.id)}" style="padding-left:${6 + Math.min(depth, 6) * 8}px"><strong>${escapeHtml(field.tag || field.xmlPath.split("/").at(-1))}</strong><span>${escapeHtml(field.label)}</span><span>${escapeHtml(field.xmlPath)}</span></button>`;
+    }).join("") || '<p class="schema-empty">該当項目がありません。</p>';
+}
+
+function renderDesignerProperties(definition = getDefinition()) {
+  const selected = getDesigner(definition)?.items.find((item) => item.id === state.designerSelectedId);
+  designerEmptySelection.hidden = Boolean(selected);
+  designerPropertyFields.hidden = !selected;
+  const fields = getFields(definition).filter((field) => field.xmlPath && !field.xmlPath.startsWith("$control/"));
+  designerMapping.innerHTML = `<option value="">未割当</option>${fields.map((field) => `<option value="${escapeHtml(field.id)}">${escapeHtml(`${field.tag || ""} ${field.label}`.trim())}</option>`).join("")}`;
+  if (!selected) return;
+  designerPropertyInputs.text.value = selected.text || "";
+  designerPropertyInputs.x.value = designerNumber(selected.x);
+  designerPropertyInputs.y.value = designerNumber(selected.y);
+  designerPropertyInputs.width.value = designerNumber(selected.width);
+  designerPropertyInputs.height.value = designerNumber(selected.height);
+  designerPropertyInputs.fontSize.value = designerNumber(selected.fontSize);
+  designerMapping.value = selected.fieldId || "";
+  const rules = selected.rules || {};
+  designerPropertyInputs.calculation.value = rules.calculation || "";
+  designerPropertyInputs.required.checked = Boolean(rules.required);
+  designerPropertyInputs.min.value = rules.min ?? "";
+  designerPropertyInputs.max.value = rules.max ?? "";
+  designerPropertyInputs.pattern.value = rules.pattern || "";
+  designerPropertyInputs.message.value = rules.message || "";
+}
+
+function addDesignerItem(type, mapping = null) {
+  const design = getDesigner();
+  if (!design) return;
+  const item = createDesignerItem(type, design.items.length);
+  if (mapping && type === "field") Object.assign(item, { fieldId: mapping.id, xmlPath: mapping.xmlPath, text: mapping.label });
+  design.items.push(item);
+  state.designerSelectedId = item.id;
+  renderDesigner();
+  setLayoutEditorStatus("デザイン未反映", "dirty");
+}
+
+function duplicateDesignerItem() {
+  const design = getDesigner();
+  const selected = design?.items.find((item) => item.id === state.designerSelectedId);
+  if (!selected) return;
+  const clone = cloneDesignerItem(selected);
+  design.items.push(clone);
+  state.designerSelectedId = clone.id;
+  renderDesigner();
+  setLayoutEditorStatus("デザイン未反映", "dirty");
+}
+
+function deleteDesignerItem() {
+  const design = getDesigner();
+  if (!design || !state.designerSelectedId) return;
+  design.items = design.items.filter((item) => item.id !== state.designerSelectedId);
+  state.designerSelectedId = "";
+  renderDesigner();
+  setLayoutEditorStatus("デザイン未反映", "dirty");
+}
+
+function handleSchemaTreeClick(event) {
+  const button = event.target.closest("[data-schema-field]");
+  if (!button) return;
+  const field = getFields().find((entry) => entry.id === button.dataset.schemaField);
+  if (!field) return;
+  const selected = getDesigner()?.items.find((item) => item.id === state.designerSelectedId);
+  if (!selected || selected.type !== "field") {
+    addDesignerItem("field", field);
+    return;
+  }
+  Object.assign(selected, { fieldId: field.id, xmlPath: field.xmlPath, text: field.label });
+  renderDesigner();
+  setLayoutEditorStatus("マッピング未反映", "dirty");
+}
+
+function updateDesignerMapping() {
+  const selected = getDesigner()?.items.find((item) => item.id === state.designerSelectedId);
+  if (!selected) return;
+  const field = getFields().find((entry) => entry.id === designerMapping.value);
+  selected.fieldId = field?.id || "";
+  selected.xmlPath = field?.xmlPath || "";
+  if (field && (!selected.text || selected.text === "入力項目")) selected.text = field.label;
+  renderDesigner();
+  setLayoutEditorStatus("マッピング未反映", "dirty");
+}
+
+function updateDesignerProperties() {
+  const selected = getDesigner()?.items.find((item) => item.id === state.designerSelectedId);
+  if (!selected) return;
+  selected.text = designerPropertyInputs.text.value;
+  selected.x = designerNumber(designerPropertyInputs.x.value);
+  selected.y = designerNumber(designerPropertyInputs.y.value);
+  selected.width = Math.max(.5, designerNumber(designerPropertyInputs.width.value));
+  selected.height = Math.max(.5, designerNumber(designerPropertyInputs.height.value));
+  selected.fontSize = Math.max(4, designerNumber(designerPropertyInputs.fontSize.value));
+  selected.rules = {
+    calculation: designerPropertyInputs.calculation.value.trim(),
+    required: designerPropertyInputs.required.checked,
+    min: designerPropertyInputs.min.value,
+    max: designerPropertyInputs.max.value,
+    pattern: designerPropertyInputs.pattern.value,
+    message: designerPropertyInputs.message.value
+  };
+  const element = designerCanvas.querySelector(`[data-designer-id="${CSS.escape(selected.id)}"]`);
+  if (element) {
+    Object.assign(element.style, {
+      left: `${selected.x}mm`, top: `${selected.y}mm`, width: `${selected.width}mm`, height: `${selected.height}mm`, fontSize: `${selected.fontSize}pt`
+    });
+    if (element.firstChild?.nodeType === Node.TEXT_NODE) element.firstChild.nodeValue = selected.text;
+  }
+  setLayoutEditorStatus("デザイン未反映", "dirty");
+}
+
+function handleDesignerPointerDown(event) {
+  const element = event.target.closest("[data-designer-id]");
+  if (!element) {
+    state.designerSelectedId = "";
+    renderDesigner();
+    return;
+  }
+  const design = getDesigner();
+  const item = design?.items.find((entry) => entry.id === element.dataset.designerId);
+  if (!item) return;
+  state.designerSelectedId = item.id;
+  const rect = designerCanvas.getBoundingClientRect();
+  state.designerDrag = {
+    item,
+    mode: event.target.dataset.designerResize ? "resize" : "move",
+    startX: event.clientX,
+    startY: event.clientY,
+    original: { x: item.x, y: item.y, width: item.width, height: item.height },
+    mmPerPixelX: 210 / rect.width,
+    mmPerPixelY: 297 / rect.height
+  };
+  designerCanvas.setPointerCapture(event.pointerId);
+  renderDesigner();
+  event.preventDefault();
+}
+
+function handleDesignerPointerMove(event) {
+  const drag = state.designerDrag;
+  if (!drag) return;
+  const dx = (event.clientX - drag.startX) * drag.mmPerPixelX;
+  const dy = (event.clientY - drag.startY) * drag.mmPerPixelY;
+  if (drag.mode === "resize") {
+    drag.item.width = Math.max(.5, designerNumber(drag.original.width + dx));
+    drag.item.height = Math.max(.5, designerNumber(drag.original.height + dy));
+  } else {
+    drag.item.x = Math.max(0, Math.min(210 - drag.item.width, designerNumber(drag.original.x + dx)));
+    drag.item.y = Math.max(0, Math.min(297 - drag.item.height, designerNumber(drag.original.y + dy)));
+  }
+  const element = designerCanvas.querySelector(`[data-designer-id="${CSS.escape(drag.item.id)}"]`);
+  if (element) Object.assign(element.style, { left: `${drag.item.x}mm`, top: `${drag.item.y}mm`, width: `${drag.item.width}mm`, height: `${drag.item.height}mm` });
+  renderDesignerProperties();
+  setLayoutEditorStatus("デザイン未反映", "dirty");
+}
+
+function handleDesignerPointerUp(event) {
+  if (!state.designerDrag) return;
+  state.designerDrag = null;
+  if (designerCanvas.hasPointerCapture(event.pointerId)) designerCanvas.releasePointerCapture(event.pointerId);
+}
+
+function applyDesignerLayout() {
+  const definition = getDefinition();
+  const page = definition.layout?.pages?.find((entry) => entry.number === state.activePage);
+  const design = getDesigner(definition, page);
+  if (!page || !design) return;
+  if (!design.items.length) {
+    alert("文字、入力部品、罫線、枠のいずれかを配置してください。");
+    return;
+  }
+  const source = compileDesignerTemplate(definition, page, design);
+  state.layoutSources.set(layoutSourceKey(definition, page), source);
+  layoutSource.value = source;
+  renderOfficialPaper(definition);
+  setLayoutEditorStatus("デザインを実行画面へ反映済み", "applied");
+}
+
+function designerNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.round(parsed * 10) / 10 : 0;
 }
 
 function handleLayoutSourceInput() {
@@ -644,6 +885,9 @@ function applyDefinition(definition, fileName, instanceXml = "") {
   state.validation = [];
   state.xsdValidation = { status: "idle", errors: [] };
   state.layoutSources = new Map();
+  state.designerLayouts = new Map();
+  state.designerSelectedId = "";
+  state.designerDrag = null;
   renderNav();
   render();
 }

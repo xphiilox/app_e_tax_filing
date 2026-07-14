@@ -2,6 +2,7 @@ import { createDefaultHtmlTemplate } from "../src/html-renderer.js";
 import { R07_FIELD_SPEC, R07_PAGES } from "../src/official-r07-field-spec.js";
 
 const definition = {
+  rootElement: "KOA020",
   officialFieldSpec: true,
   sections: [{ id: "official", fields: R07_FIELD_SPEC }]
 };
