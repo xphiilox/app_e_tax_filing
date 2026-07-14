@@ -76,9 +76,12 @@ CAB 展開後、公式の XML 構造設計書・帳票フィールド仕様書�
 
 ```sh
 node scripts/verify_r07_compliance.mjs
+node scripts/verify_r07_visual.mjs
 ```
 
 検証内容は、全719タグ、繰返し47タグ、複合項目36タグ、277値域の328境界値、580形式ケース、70計算式、12相関条件、準確定申告とTEZ310です。結果は `reports/r07-compliance-report.json` に保存され、未検証項目が残る場合はコマンドが失敗します。
+
+外観検証は国税庁「令和7年分 所得税及び復興特別所得税の申告書」第一表・第二表のA4比率、主要区画、色帯、桁枠、印刷寸法を基準にします。第一表141フィールド、第二表228フィールドが専用HTML上に重複・欠落なく配置されていることと、画像・SVGに依存していないことを `verify_r07_visual.mjs` で検証します。
 
 画面の「HTML / CSS / JavaScript レイアウト」エディターでページごとのソースを直接変更できます。自動反映を有効にすると入力から約280ms後にプレビューが更新されます。`data-etax-field="フィールドID"` または `data-etax-path="XMLパス"` を付けた要素は入力欄としてXMLと連携し、JavaScriptからは `window.etax.value("XMLパス")` と `window.etax.update("フィールドID", 値)` を利用できます。編集コードは外部通信を禁止したsandbox内で実行します。
 
