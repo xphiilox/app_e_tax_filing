@@ -1,13 +1,14 @@
 import { formDefinitions, officialSpecs } from "./specs.js";
 import { buildXml, definitionFromXml } from "./xml.js";
 import { createDefaultHtmlTemplate, createHtmlPreviewDocument } from "./html-renderer.js";
-import { extractOfficialR07Values, isOfficialR07Instance } from "./official-r07-xml-state.js";
+import { detectSupportedOfficialForm, extractOfficialR07Values } from "./official-r07-xml-state.js";
+import { createOfficialPko0420Definition } from "./official-pko0420.js";
 import {
   calculateOfficialFields,
   enhanceOfficialR07Definition,
   synchronizeOfficialValues,
   validateOfficialFields
-} from "./official-r07-compliance.js";
+} from "./official-r07-compliance.js?v=20260714-pko0420";
 
 const state = {
   activeTaxType: "income",
@@ -27,6 +28,7 @@ const specMeta = document.querySelector("#specMeta");
 const formTitle = document.querySelector("#formTitle");
 const paperPreview = document.querySelector("#paperPreview");
 const xmlPreview = document.querySelector("#xmlPreview");
+const xmlProcedureMeta = document.querySelector("#xmlProcedureMeta");
 const statusGrid = document.querySelector("#statusGrid");
 const validationSummary = document.querySelector("#validationSummary");
 const pageTabs = document.querySelector("#pageTabs");
@@ -61,6 +63,7 @@ async function init() {
   renderNav();
   render();
   document.querySelector("#loadOfficialR07").addEventListener("click", () => loadOfficialR07());
+  document.querySelector("#loadOfficialPko0420").addEventListener("click", () => loadOfficialPko0420());
   document.querySelector("#loadSample").addEventListener("click", loadSample);
   document.querySelector("#downloadXml").addEventListener("click", downloadXml);
   document.querySelector("#downloadPdf").addEventListener("click", printCurrentPaper);
@@ -119,6 +122,9 @@ function render() {
   const definition = getDefinition();
   const spec = state.customDefinition ? null : officialSpecs.find((entry) => entry.taxType === definition.taxType);
   formTitle.textContent = definition.title;
+  xmlProcedureMeta.textContent = definition.procedure
+    ? `${definition.procedure} ${definition.procedureVersion || ""} / ${definition.rootElement} ${definition.version || ""}`
+    : definition.rootElement;
   specMeta.innerHTML = spec
     ? `項番${spec.item} / ${spec.updatedAt}<br><a href="${spec.href}" target="_blank" rel="noreferrer">公式CAB ${spec.size}</a>`
     : `<strong>${escapeHtml(state.importedFileName)}</strong><br>${sourceLabel(definition.sourceType)}から生成した帳票を表示中`;
@@ -193,7 +199,7 @@ function renderOfficialPaper(definition) {
   const page = definition.layout.pages.find((entry) => entry.number === state.activePage) || definition.layout.pages[0];
   state.activePage = page.number;
   const source = getLayoutSource(definition, page);
-  const previewDocument = createHtmlPreviewDocument(source, currentXml(definition), getFields(definition), state.values, definition.officialFieldSpec);
+  const previewDocument = createHtmlPreviewDocument(source, currentXml(definition), getFields(definition), state.values, definition.officialFieldSpec, definition.rootElement);
   paperPreview.className = "paper official-paper-shell";
   paperPreview.innerHTML = `
     <iframe class="html-paper-frame" title="${escapeHtml(`${definition.title} ${page.label}`)}" sandbox="allow-scripts allow-modals"></iframe>
@@ -267,7 +273,7 @@ function renderXml(definition) {
   xmlPreview.textContent = currentXml(definition);
 }
 
-function applyEditedXmlToForm() {
+async function applyEditedXmlToForm() {
   const definition = getDefinition();
   if (!definition.officialFieldSpec) {
     alert("正式e-Tax XML帳票で利用してください。");
@@ -275,11 +281,31 @@ function applyEditedXmlToForm() {
   }
   try {
     const xmlText = xmlPreview.textContent.trim();
+    state.xsdValidation = { status: "checking", errors: [] };
+    renderXsdValidation();
+    const result = await requestXsdValidation(xmlText);
+    state.xsdValidation = {
+      status: result.valid ? "valid" : "invalid",
+      errors: result.errors || [],
+      schema: result.schema
+    };
+    renderXsdValidation();
+    if (!result.valid) return;
+
+    const form = result.forms?.[0]?.id || detectSupportedOfficialForm(xmlText);
+    if (!form) throw new Error("XSDには適合しましたが、帳票要素がありません。CONTENTSへ対象帳票を追加してください。");
+    if (form !== definition.rootElement) {
+      if (form === "KOA020") await loadOfficialR07(xmlText, "XSD検証済み RKO0010 / KOA020 XML");
+      else if (form === "KOZ280") await loadOfficialPko0420(xmlText, "XSD検証済み PKO0420 / KOZ280 XML");
+      else throw new Error(`帳票 ${form} の画面定義は未対応です。`);
+      state.xsdValidation = { status: "valid", errors: [], schema: result.schema };
+      renderXsdValidation();
+      return;
+    }
     const values = extractOfficialR07Values(definition, xmlText);
     state.xmlText = xmlText;
     state.values = values;
     state.validation = [];
-    state.xsdValidation = { status: "idle", errors: [] };
     renderStatus(definition);
     renderPaper(definition);
     renderValidation();
@@ -368,13 +394,7 @@ async function validateXsd() {
   state.xsdValidation = { status: "checking", errors: [] };
   renderXsdValidation();
   try {
-    const response = await fetch("/api/validate", {
-      method: "POST",
-      headers: { "Content-Type": "application/xml; charset=UTF-8" },
-      body: currentXml(getDefinition())
-    });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.errors?.[0] || "XSD検証サービスから応答がありません。");
+    const result = await requestXsdValidation(currentXml(getDefinition()));
     state.xsdValidation = {
       status: result.valid ? "valid" : "invalid",
       errors: result.errors || [],
@@ -387,6 +407,17 @@ async function validateXsd() {
     };
   }
   renderXsdValidation();
+}
+
+async function requestXsdValidation(xmlText) {
+  const response = await fetch("/api/validate", {
+    method: "POST",
+    headers: { "Content-Type": "application/xml; charset=UTF-8" },
+    body: xmlText
+  });
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.errors?.[0] || "XSD検証サービスから応答がありません。");
+  return result;
 }
 
 function renderXsdValidation() {
@@ -479,6 +510,20 @@ function loadSample() {
     withheldTax: "143000",
     people: "8"
   });
+  if (getDefinition().rootElement === "KOZ280") {
+    Object.assign(state.values, {
+      pko_1_1: "5", pko_2_1: "8", pko_3_1: "1", pko_4_1: "麹町",
+      pko_5_1: "5", pko_6_1: "8", pko_7_1: "7", pko_8_1: "14",
+      pko_10_1: "100", pko_11_1: "0013", pko_12_1: "東京都千代田区霞が関1-1-1",
+      pko_16_1: "ヤマダ タロウ", pko_17_1: "山田 太郎", pko_18_1: "会社員",
+      pko_19_1: "03", pko_20_1: "1234", pko_21_1: "5678",
+      pko_22_1: "5", pko_23_1: "8", pko_24_1: "300000", pko_25_1: "180000",
+      pko_30_1: "5", pko_31_1: "8", pko_39_1: "1",
+      pko_40_1: "業況の変化により、本年分の申告納税見積額が予定納税基準額を下回るため。",
+      pko_42_1: "5", pko_43_1: "8", pko_47_1: "3200000", pko_107_1: "180000",
+      pko_108_1: "90000", pko_109_1: "90000", pko_110_1: "1"
+    });
+  }
   synchronizeOfficialValues(getDefinition(), state.values, true);
   if (getDefinition().officialFieldSpec) replaceOfficialXml(getDefinition(), state.values);
   validate();
@@ -531,16 +576,38 @@ async function importDefinition(event) {
   if (!file) return;
   const text = await file.text();
   try {
-    if (!file.name.toLowerCase().endsWith(".json") && isOfficialR07Instance(text)) {
-      await loadOfficialR07(text, file.name);
-      return;
-    }
+    const officialForm = file.name.toLowerCase().endsWith(".json") ? "" : detectSupportedOfficialForm(text);
+    if (officialForm) return await openValidatedOfficialXml(text, file.name);
     const definition = file.name.toLowerCase().endsWith(".json") ? JSON.parse(text) : definitionFromXml(text);
     applyDefinition(definition, file.name);
   } catch (error) {
     alert(error.message);
   } finally {
     event.target.value = "";
+  }
+}
+
+async function openValidatedOfficialXml(xmlText, fileName) {
+  state.xsdValidation = { status: "checking", errors: [] };
+  renderXsdValidation();
+  const result = await requestXsdValidation(xmlText);
+  state.xsdValidation = { status: result.valid ? "valid" : "invalid", errors: result.errors || [], schema: result.schema };
+  renderXsdValidation();
+  if (!result.valid) throw new Error("XMLが公式XSDに適合しないため、帳票は生成しませんでした。検証結果を確認してください。");
+  const form = result.forms?.[0]?.id || detectSupportedOfficialForm(xmlText);
+  if (form === "KOA020") await loadOfficialR07(xmlText, fileName);
+  else if (form === "KOZ280") await loadOfficialPko0420(xmlText, fileName);
+  else throw new Error("XSDには適合しましたが、表示対象の帳票要素がありません。");
+  state.xsdValidation = { status: "valid", errors: [], schema: result.schema };
+  renderXsdValidation();
+}
+
+async function loadOfficialPko0420(instanceXml = "", fileName = "所得-申請 Ver21 / PKO0420 26.0.0 / KOZ280 21.0") {
+  try {
+    applyDefinition(createOfficialPko0420Definition(), fileName, instanceXml);
+  } catch (error) {
+    console.error(error);
+    if (instanceXml) alert(error.message);
   }
 }
 

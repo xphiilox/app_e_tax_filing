@@ -23,6 +23,7 @@
           <h2>仕様ソース</h2>
           <p id="specMeta"></p>
           <button class="secondary" id="loadOfficialR07">令和7年申告書を表示</button>
+          <button class="secondary" id="loadOfficialPko0420">予定納税額の減額申請書を表示</button>
           <button class="secondary" id="loadSample">サンプル値を入れる</button>
           <label class="file-button">
             構造定義XMLを読み込む
@@ -79,7 +80,7 @@
               <div class="xml-toolbar">
                 <div>
                   <strong>正式e-Tax XML</strong>
-                  <span>RKO0010 25.0.0 / KOA020 23.0</span>
+                  <span id="xmlProcedureMeta">RKO0010 25.0.0 / KOA020 23.0</span>
                 </div>
                 <div class="xml-toolbar-actions">
                   <button type="button" id="applyXmlToForm">XMLを帳票へ反映</button>
@@ -97,6 +98,6 @@
       </main>
     </div>
 
-    <script type="module" src="./src/app.js"></script>
+    <script type="module" src="./src/app.js?v=20260714-pko0420"></script>
   </body>
 </html>

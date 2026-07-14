@@ -1,6 +1,6 @@
 export function createDefaultHtmlTemplate(definition, page) {
-  if (definition.officialFieldSpec && page.number === 1) return createOfficialFirstForm(definition, page);
-  if (definition.officialFieldSpec && page.number === 2) return createOfficialSecondForm(definition, page);
+  if (definition.rootElement === "KOA020" && definition.officialFieldSpec && page.number === 1) return createOfficialFirstForm(definition, page);
+  if (definition.rootElement === "KOA020" && definition.officialFieldSpec && page.number === 2) return createOfficialSecondForm(definition, page);
   const sourcePage = page.number;
   const pageFields = definition.sections
     .map((section) => ({ ...section, fields: section.fields.filter((field) => field.page === sourcePage) }))
@@ -53,8 +53,8 @@ export function createDefaultHtmlTemplate(definition, page) {
   <main class="sheet">
     <header class="sheet-header">
       <div>
-        <p>令和7年分</p>
-        <h1>所得税及び復興特別所得税の申告書</h1>
+        <p>${escapeHtml(definition.procedure ? `${definition.procedure} / ${definition.procedureVersion || ""}` : "e-Tax帳票")}</p>
+        <h1>${escapeHtml(definition.title)}</h1>
       </div>
       <div class="page-name">${escapeHtml(page.label)}</div>
     </header>
@@ -279,8 +279,8 @@ function secondTable(title, fields, start, end, className="") {
   return `<section class="second-table ${className}"><h2>○ ${escapeHtml(title)}</h2><div class="second-table-grid">${selected.map((field)=>`<label class="field-wrap"><span>${escapeHtml(field.name||field.label)}</span>${renderOfficialInput(field)}</label>`).join("")}</div></section>`;
 }
 
-export function createHtmlPreviewDocument(source, xmlText, fields = [], values = {}, xmlIsSource = false) {
-  const runtime = runtimeScript(xmlText, fields, values, xmlIsSource);
+export function createHtmlPreviewDocument(source, xmlText, fields = [], values = {}, xmlIsSource = false, formRoot = "KOA020") {
+  const runtime = runtimeScript(xmlText, fields, values, xmlIsSource, formRoot);
   const csp = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; script-src \'unsafe-inline\'; img-src data:;">';
   let documentSource = source.includes("<head>") ? source.replace("<head>", `<head>\n  ${csp}`) : `${csp}\n${source}`;
   documentSource = documentSource.includes("</body>")
@@ -314,7 +314,7 @@ function renderInput(field) {
   return `<input class="etax-input" type="text"${numeric} aria-label="${escapeHtml(field.label)}" data-etax-field="${escapeHtml(field.id)}" data-etax-path="${escapeHtml(field.xmlPath)}">`;
 }
 
-function runtimeScript(xmlText, fields, values, xmlIsSource) {
+function runtimeScript(xmlText, fields, values, xmlIsSource, formRoot) {
   const safeXml = JSON.stringify(xmlText).replaceAll("<", "\\u003c");
   const safeFields = JSON.stringify(fields.map(({ id, xmlPath, type, label, component, commonType, repeatTag, occurrence, pathMeta }) => ({ id, xmlPath, type, label, component, commonType, repeatTag, occurrence, pathMeta }))).replaceAll("<", "\\u003c");
   const safeValues = JSON.stringify(values).replaceAll("<", "\\u003c");
@@ -363,8 +363,10 @@ function runtimeScript(xmlText, fields, values, xmlIsSource) {
       if (!field) return "";
       const path = String(field.xmlPath || "");
       if (path.startsWith("$control/TEZ310/")) return readTez310(field);
-      const form = findElement("KOA020");
-      if (path.startsWith("KOA020/@")) return form?.getAttribute(path.slice(8)) || "";
+      const formName = ${JSON.stringify(formRoot)};
+      const form = findElement(formName);
+      const attributePrefix = formName + "/@";
+      if (path.startsWith(attributePrefix)) return form?.getAttribute(path.slice(attributePrefix.length)) || "";
       let element;
       if (path.startsWith("IT/")) element = resolvePath(findElement("IT"), path.split("/").slice(1), field);
       else if (field.pathMeta?.length) element = resolvePath(form, field.pathMeta.map((segment) => segment.tag), field);

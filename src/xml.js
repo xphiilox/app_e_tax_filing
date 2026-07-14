@@ -1,4 +1,5 @@
 import { buildOfficialR07Xml, isOfficialR07Definition } from "./official-r07.js";
+import { buildOfficialPko0420Xml, isOfficialPko0420Definition } from "./official-pko0420.js";
 
 export function escapeXml(value) {
   return String(value ?? "")
@@ -12,6 +13,9 @@ export function escapeXml(value) {
 export function buildXml(definition, values) {
   if (isOfficialR07Definition(definition)) {
     return buildOfficialR07Xml(definition, values);
+  }
+  if (isOfficialPko0420Definition(definition)) {
+    return buildOfficialPko0420Xml(definition, values);
   }
   const tree = {};
   definition.sections.flatMap((section) => section.fields).forEach((field) => {

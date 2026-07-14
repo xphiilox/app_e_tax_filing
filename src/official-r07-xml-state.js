@@ -9,10 +9,22 @@ export function isOfficialR07Instance(xmlText) {
   }
 }
 
+export function detectSupportedOfficialForm(xmlText) {
+  try {
+    const document = parse(xmlText);
+    if (findElement(document, "KOA020")) return "KOA020";
+    if (findElement(document, "KOZ280")) return "KOZ280";
+    return "";
+  } catch {
+    return "";
+  }
+}
+
 export function extractOfficialR07Values(definition, xmlText) {
   const document = parse(xmlText);
-  const form = findElement(document, "KOA020");
-  if (!form) throw new Error("XML内にKOA020帳票がありません。");
+  const formName = definition.rootElement || "KOA020";
+  const form = findElement(document, formName);
+  if (!form) throw new Error(`XML内に${formName}帳票がありません。`);
   const values = {};
   for (const field of definition.sections.flatMap((section) => section.fields)) {
     values[field.id] = readField(document, form, field);
@@ -24,7 +36,7 @@ export function officialR07FieldValue(definition, xmlText, fieldId) {
   const field = definition.sections.flatMap((section) => section.fields).find((entry) => entry.id === fieldId);
   if (!field) return "";
   const document = parse(xmlText);
-  const form = findElement(document, "KOA020");
+  const form = findElement(document, definition.rootElement || "KOA020");
   return form ? readField(document, form, field) : "";
 }
 
@@ -36,7 +48,8 @@ function parse(xmlText) {
 
 function readField(document, form, field) {
   if (field.xmlPath?.startsWith("$control/TEZ310/")) return readTez310(document, field.id);
-  if (field.xmlPath?.startsWith("KOA020/@")) return form.getAttribute(field.xmlPath.slice("KOA020/@".length)) || "";
+  const attributePrefix = `${form.localName}/@`;
+  if (field.xmlPath?.startsWith(attributePrefix)) return form.getAttribute(field.xmlPath.slice(attributePrefix.length)) || "";
   if (field.xmlPath?.startsWith("IT/")) {
     const it = findElement(document, "IT");
     return it ? readElement(document, resolveDirectPath(it, field.xmlPath.split("/").slice(1), field), field) : "";

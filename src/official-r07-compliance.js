@@ -76,6 +76,7 @@ export function synchronizeOfficialValues(definition, values, includeLegacyValue
     assignFirst("ABD00050", "withholdingBreakdownIncome", "salaryPayment");
     assignFirst("ABD00060", "withholdingBreakdownTax", "withheldTax");
   }
+  if (definition.rootElement !== "KOA020") return;
   const filingKind = (byTag.get("ABA00020") || [])[0];
   if (filingKind && !clean(values[filingKind.id])) values[filingKind.id] = "1";
   calculateOfficialFields(definition, values);
@@ -98,6 +99,7 @@ function assignCompound(fields, source, tag, values) {
 
 export function calculateOfficialFields(definition, values) {
   if (!definition?.officialFieldSpec) return {};
+  if (definition.rootElement !== "KOA020") return {};
   const fields = definition.sections.flatMap((section) => section.fields).filter((field) => field.item);
   const byTag = Map.groupBy(fields, (field) => field.tag);
   const changed = {};
@@ -161,6 +163,7 @@ export function validateOfficialFields(definition, values) {
     if (field.note.includes("千円未満") && numeric(value) % 1000 !== 0) errors.push(`${field.label}${occurrence(field)} は千円未満を切り捨てた金額で入力してください。`);
     if (field.note.includes("百円未満") && numeric(value) % 100 !== 0) errors.push(`${field.label}${occurrence(field)} は百円未満を切り捨てた金額で入力してください。`);
   }
+  if (definition.rootElement !== "KOA020") return errors;
   const filingKind = firstText("ABA00020");
   if (firstText("ABA00030") && !/^\d{5}$/.test(clean(values.taxOfficeCode))) errors.push("税務署名を入力した場合、5桁の税務署番号が必要です。");
   if (!["2", "4"].includes(filingKind) && firstNumber("ABB00710") >= 1 && firstNumber("ABB00710") !== firstNumber("ABD00070")) {

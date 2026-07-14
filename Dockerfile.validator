@@ -7,6 +7,7 @@ RUN apt-get update \
 WORKDIR /app
 COPY server/validator.py /app/validator.py
 COPY schemas/r07 /schemas
+COPY schemas/r08 /schemas
 
 EXPOSE 8081
 CMD ["python", "/app/validator.py"]
