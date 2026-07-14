@@ -1,0 +1,45 @@
+{
+  "specification": "RKO0010 25.0.0 / KOA020 23.0",
+  "result": "pass",
+  "sourceOfTruth": "displayedOfficialXml",
+  "browserIntegrationCases": [
+    {
+      "case": "XMLから第一表へのIDREF解決",
+      "xmlElement": "NOZEISHA_NM",
+      "formField": "r07_19_1",
+      "expected": "XML正本 太郎",
+      "actual": "XML正本 太郎",
+      "status": "pass"
+    },
+    {
+      "case": "第一表入力から同一XML要素への反映",
+      "formField": "r07_19_1",
+      "xmlElement": "NOZEISHA_NM",
+      "expected": "帳票入力 花子",
+      "actual": "帳票入力 花子",
+      "status": "pass"
+    },
+    {
+      "case": "第二表の繰返し順をXMLから復元",
+      "repeatElement": "ABD00010",
+      "occurrences": 2,
+      "expected": ["給与A", "給与B"],
+      "actual": ["給与A", "給与B"],
+      "status": "pass"
+    },
+    {
+      "case": "XML正本から再描画後の公式XSD検証",
+      "schema": "shotoku/RKO0010-250.xsd",
+      "status": "pass"
+    }
+  ],
+  "resolverCoverage": [
+    "フルXMLパス",
+    "繰返し出現順",
+    "複合項目の子要素",
+    "ID/IDREF",
+    "KOA020属性",
+    "IT共通情報",
+    "TEZ310準確定申告情報"
+  ]
+}

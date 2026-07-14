@@ -279,8 +279,8 @@ function secondTable(title, fields, start, end, className="") {
   return `<section class="second-table ${className}"><h2>○ ${escapeHtml(title)}</h2><div class="second-table-grid">${selected.map((field)=>`<label class="field-wrap"><span>${escapeHtml(field.name||field.label)}</span>${renderOfficialInput(field)}</label>`).join("")}</div></section>`;
 }
 
-export function createHtmlPreviewDocument(source, xmlText, fields = [], values = {}) {
-  const runtime = runtimeScript(xmlText, fields, values);
+export function createHtmlPreviewDocument(source, xmlText, fields = [], values = {}, xmlIsSource = false) {
+  const runtime = runtimeScript(xmlText, fields, values, xmlIsSource);
   const csp = '<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; style-src \'unsafe-inline\'; script-src \'unsafe-inline\'; img-src data:;">';
   let documentSource = source.includes("<head>") ? source.replace("<head>", `<head>\n  ${csp}`) : `${csp}\n${source}`;
   documentSource = documentSource.includes("</body>")
@@ -314,44 +314,77 @@ function renderInput(field) {
   return `<input class="etax-input" type="text"${numeric} aria-label="${escapeHtml(field.label)}" data-etax-field="${escapeHtml(field.id)}" data-etax-path="${escapeHtml(field.xmlPath)}">`;
 }
 
-function runtimeScript(xmlText, fields, values) {
+function runtimeScript(xmlText, fields, values, xmlIsSource) {
   const safeXml = JSON.stringify(xmlText).replaceAll("<", "\\u003c");
-  const safeFields = JSON.stringify(fields.map(({ id, xmlPath, type, label }) => ({ id, xmlPath, type, label }))).replaceAll("<", "\\u003c");
+  const safeFields = JSON.stringify(fields.map(({ id, xmlPath, type, label, component, commonType, repeatTag, occurrence, pathMeta }) => ({ id, xmlPath, type, label, component, commonType, repeatTag, occurrence, pathMeta }))).replaceAll("<", "\\u003c");
   const safeValues = JSON.stringify(values).replaceAll("<", "\\u003c");
   return `<script>
   (() => {
     const xmlText = ${safeXml};
     const fields = ${safeFields};
     const values = ${safeValues};
+    const xmlIsSource = ${Boolean(xmlIsSource)};
     const fieldById = new Map(fields.map((field) => [field.id, field]));
     const fieldByPath = new Map(fields.map((field) => [field.xmlPath, field]));
     const xml = new DOMParser().parseFromString(xmlText, "application/xml");
     const elements = Array.from(xml.getElementsByTagName("*"));
     const ids = new Map(elements.map((element) => [element.getAttribute("ID"), element]).filter(([id]) => id));
-    const children = (element) => Object.fromEntries(Array.from(element.children).map((child) => [child.localName, child.textContent.trim()]));
-    const format = (element) => {
-      const value = children(element);
-      if (element.localName === "ZEIMUSHO") return value.zeimusho_NM || value.zeimusho_CD || "";
-      if (["TEISYUTSU_DAY", "BIRTHDAY"].includes(element.localName)) {
-        const era = {1:"明治",2:"大正",3:"昭和",4:"平成",5:"令和"}[value.era] || "";
-        return value.yy ? era + value.yy + "年" + (value.mm || "") + "月" + (value.dd || "") + "日" : "";
+    const directChild = (element, name) => Array.from(element?.children || []).find((child) => child.localName === name) || null;
+    const findElement = (name) => elements.find((element) => element.localName === name) || null;
+    const resolvePath = (root, segments, field) => {
+      let cursor = root;
+      for (const segment of segments) {
+        if (cursor?.localName === segment) continue;
+        const matches = Array.from(cursor?.children || []).filter((child) => child.localName === segment);
+        const index = segment === field?.repeatTag ? Math.max(0, Number(field.occurrence || 1) - 1) : 0;
+        cursor = matches[index];
+        if (!cursor) return null;
       }
-      if (element.localName === "NENBUN") return value.yy || "";
-      if (element.localName === "NOZEISHA_ZIP") return [value.zip1, value.zip2].filter(Boolean).join("-");
-      if (element.localName === "NOZEISHA_BANGO") return value.kojinbango || value.hojinbango || "";
-      if (element.localName === "NOZEISHA_TEL") return [value.tel1, value.tel2, value.tel3].filter(Boolean).join("-");
-      return element.children.length ? element.textContent.trim() : element.textContent.trim();
+      return cursor;
     };
-    const find = (path) => {
-      const name = String(path || "").split("/").filter(Boolean).at(-1);
-      const element = elements.find((candidate) => candidate.localName === name);
-      if (!element) return null;
-      return element.getAttribute("IDREF") ? ids.get(element.getAttribute("IDREF")) || null : element;
+    const readTez310 = (field) => {
+      const names = {deceasedName:"CDB00040",deceasedAddress:"CDB00010",heirName:"CDD00010",heirKana:"CDF00040",heirAddress:"CDF00020",heirNumber:"CDF00055"};
+      if (field.id === "deathDate") {
+        const date = findElement("CDB00050");
+        if (!date) return "";
+        const era = Number(directChild(date,"era")?.textContent || 0);
+        const yy = Number(directChild(date,"yy")?.textContent || 0);
+        const mm = Number(directChild(date,"mm")?.textContent || 0);
+        const dd = Number(directChild(date,"dd")?.textContent || 0);
+        const year = era === 5 ? yy + 2018 : era === 4 ? yy + 1988 : era === 3 ? yy + 1925 : era === 2 ? yy + 1911 : 0;
+        return year && mm && dd ? year + "-" + String(mm).padStart(2,"0") + "-" + String(dd).padStart(2,"0") : "";
+      }
+      const element = findElement(names[field.id]);
+      if (!element) return "";
+      if (field.id === "heirNumber") return directChild(element,"kojinbango")?.textContent.trim() || directChild(element,"hojinbango")?.textContent.trim() || "";
+      return element.textContent.trim();
+    };
+    const readField = (field) => {
+      if (!field) return "";
+      const path = String(field.xmlPath || "");
+      if (path.startsWith("$control/TEZ310/")) return readTez310(field);
+      const form = findElement("KOA020");
+      if (path.startsWith("KOA020/@")) return form?.getAttribute(path.slice(8)) || "";
+      let element;
+      if (path.startsWith("IT/")) element = resolvePath(findElement("IT"), path.split("/").slice(1), field);
+      else if (field.pathMeta?.length) element = resolvePath(form, field.pathMeta.map((segment) => segment.tag), field);
+      else element = resolvePath(form, path.split("/").filter(Boolean), field);
+      if (!element) return "";
+      const idref = element.getAttribute("IDREF");
+      if (idref) element = ids.get(idref) || element;
+      if (field.component) return directChild(element,field.component)?.textContent.trim() || "";
+      if (field.commonType === "zeimusho") return directChild(element,"zeimusho_NM")?.textContent.trim() || "";
+      if (["kubun","kubun2"].includes(field.commonType)) return directChild(element,"kubun_CD")?.textContent.trim() || "";
+      if (field.commonType === "bango") return directChild(element,"kojinbango")?.textContent.trim() || directChild(element,"hojinbango")?.textContent.trim() || "";
+      return element.textContent.trim();
     };
     window.etax = {
       xml: xmlText,
       document: xml,
-      value(path) { const element = find(path); return element ? format(element) : ""; },
+      value(pathOrField) {
+        const field = typeof pathOrField === "string" ? fieldByPath.get(pathOrField) : pathOrField;
+        return readField(field);
+      },
       update(fieldId, value) {
         parent.postMessage({ type: "etax-field-change", fieldId, value: String(value ?? "") }, "*");
       }
@@ -359,7 +392,7 @@ function runtimeScript(xmlText, fields, values) {
     document.querySelectorAll("[data-etax-path]").forEach((target) => {
       const field = fieldById.get(target.dataset.etaxField) || fieldByPath.get(target.dataset.etaxPath);
       const fieldId = field?.id || target.dataset.etaxField;
-      const rawValue = fieldId && Object.hasOwn(values, fieldId) ? String(values[fieldId] ?? "") : window.etax.value(target.dataset.etaxPath);
+      const rawValue = xmlIsSource ? readField(field) : fieldId && Object.hasOwn(values, fieldId) ? String(values[fieldId] ?? "") : readField(field);
       target.title = target.dataset.etaxPath;
       if (target.matches("input, textarea, select")) {
         target.value = rawValue;

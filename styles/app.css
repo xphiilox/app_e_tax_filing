@@ -511,6 +511,12 @@ td:last-child {
   gap: 2px;
 }
 
+.xml-toolbar .xml-toolbar-actions {
+  display: flex;
+  grid-auto-flow: column;
+  gap: 6px;
+}
+
 .xml-toolbar span {
   color: var(--muted);
   font-size: 11px;
@@ -572,6 +578,12 @@ td:last-child {
   padding: 14px;
   font-size: 12px;
   line-height: 1.5;
+  outline: 0;
+  white-space: pre;
+}
+
+.xml-preview:focus {
+  box-shadow: inset 0 0 0 2px #2aa99a;
 }
 
 .copy-fallback {

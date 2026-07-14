@@ -1,6 +1,7 @@
 import { formDefinitions, officialSpecs } from "./specs.js";
 import { buildXml, definitionFromXml } from "./xml.js";
 import { createDefaultHtmlTemplate, createHtmlPreviewDocument } from "./html-renderer.js";
+import { extractOfficialR07Values, isOfficialR07Instance } from "./official-r07-xml-state.js";
 import {
   calculateOfficialFields,
   enhanceOfficialR07Definition,
@@ -17,7 +18,8 @@ const state = {
   importedFileName: "",
   validation: [],
   xsdValidation: { status: "idle", errors: [] },
-  layoutSources: new Map()
+  layoutSources: new Map(),
+  xmlText: ""
 };
 
 const taxNav = document.querySelector("#taxNav");
@@ -44,15 +46,26 @@ function getFields(definition = getDefinition()) {
   return definition.sections.flatMap((section) => section.fields);
 }
 
+function currentXml(definition = getDefinition()) {
+  if (definition.officialFieldSpec && state.xmlText) return state.xmlText;
+  return buildXml(definition, state.values);
+}
+
+function replaceOfficialXml(definition, values) {
+  state.xmlText = buildXml(definition, values);
+  state.values = extractOfficialR07Values(definition, state.xmlText);
+}
+
 async function init() {
   hydrateDefaults();
   renderNav();
   render();
-  document.querySelector("#loadOfficialR07").addEventListener("click", loadOfficialR07);
+  document.querySelector("#loadOfficialR07").addEventListener("click", () => loadOfficialR07());
   document.querySelector("#loadSample").addEventListener("click", loadSample);
   document.querySelector("#downloadXml").addEventListener("click", downloadXml);
   document.querySelector("#downloadPdf").addEventListener("click", printCurrentPaper);
   document.querySelector("#copyXml").addEventListener("click", copyXml);
+  document.querySelector("#applyXmlToForm").addEventListener("click", applyEditedXmlToForm);
   document.querySelector("#xsdValidateButton").addEventListener("click", validateXsd);
   document.querySelector("#applyLayoutSource").addEventListener("click", applyLayoutSource);
   document.querySelector("#resetLayoutSource").addEventListener("click", resetLayoutSource);
@@ -180,11 +193,11 @@ function renderOfficialPaper(definition) {
   const page = definition.layout.pages.find((entry) => entry.number === state.activePage) || definition.layout.pages[0];
   state.activePage = page.number;
   const source = getLayoutSource(definition, page);
-  const previewDocument = createHtmlPreviewDocument(source, buildXml(definition, state.values), getFields(definition), state.values);
+  const previewDocument = createHtmlPreviewDocument(source, currentXml(definition), getFields(definition), state.values, definition.officialFieldSpec);
   paperPreview.className = "paper official-paper-shell";
   paperPreview.innerHTML = `
     <iframe class="html-paper-frame" title="${escapeHtml(`${definition.title} ${page.label}`)}" sandbox="allow-scripts allow-modals"></iframe>
-    <p class="xml-render-caption"><strong>帳票へ直接入力</strong> 水色の入力欄はe-Tax XMLへ即時同期されます。</p>
+    <p class="xml-render-caption"><strong>XML正本</strong> 表示中の正式e-Tax XMLを解析して帳票化し、帳票入力は同じXMLへ即時反映されます。</p>
   `;
   paperPreview.querySelector(".html-paper-frame").srcdoc = previewDocument;
 }
@@ -251,7 +264,32 @@ function setLayoutEditorStatus(message, status) {
 }
 
 function renderXml(definition) {
-  xmlPreview.textContent = buildXml(definition, state.values);
+  xmlPreview.textContent = currentXml(definition);
+}
+
+function applyEditedXmlToForm() {
+  const definition = getDefinition();
+  if (!definition.officialFieldSpec) {
+    alert("正式e-Tax XML帳票で利用してください。");
+    return;
+  }
+  try {
+    const xmlText = xmlPreview.textContent.trim();
+    const values = extractOfficialR07Values(definition, xmlText);
+    state.xmlText = xmlText;
+    state.values = values;
+    state.validation = [];
+    state.xsdValidation = { status: "idle", errors: [] };
+    renderStatus(definition);
+    renderPaper(definition);
+    renderValidation();
+    renderXsdValidation();
+    validationSummary.textContent = "XMLから帳票を再描画しました";
+    validationSummary.className = "ok";
+  } catch (error) {
+    state.validation = [error.message];
+    renderValidation();
+  }
 }
 
 function handlePreviewMessage(event) {
@@ -259,13 +297,20 @@ function handlePreviewMessage(event) {
   if (!iframe || event.source !== iframe.contentWindow || event.data?.type !== "etax-field-change") return;
   const field = getFields().find((entry) => entry.id === event.data.fieldId);
   if (!field) return;
-  state.values[field.id] = String(event.data.value ?? "");
-  const calculated = calculateOfficialFields(getDefinition(), state.values);
-  if (Object.keys(calculated).length) iframe.contentWindow.postMessage({ type: "etax-values", values: calculated }, "*");
+  const definition = getDefinition();
+  if (definition.officialFieldSpec) {
+    const xmlValues = extractOfficialR07Values(definition, currentXml(definition));
+    xmlValues[field.id] = String(event.data.value ?? "");
+    const calculated = calculateOfficialFields(definition, xmlValues);
+    replaceOfficialXml(definition, xmlValues);
+    if (Object.keys(calculated).length) iframe.contentWindow.postMessage({ type: "etax-values", values: calculated }, "*");
+  } else {
+    state.values[field.id] = String(event.data.value ?? "");
+  }
   state.validation = [];
   state.xsdValidation = { status: "idle", errors: [] };
-  renderStatus(getDefinition());
-  renderXml(getDefinition());
+  renderStatus(definition);
+  renderXml(definition);
   renderXsdValidation();
   validationSummary.textContent = "XMLへ同期済み";
   validationSummary.className = "ok";
@@ -326,7 +371,7 @@ async function validateXsd() {
     const response = await fetch("/api/validate", {
       method: "POST",
       headers: { "Content-Type": "application/xml; charset=UTF-8" },
-      body: buildXml(getDefinition(), state.values)
+      body: currentXml(getDefinition())
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.errors?.[0] || "XSD検証サービスから応答がありません。");
@@ -435,6 +480,7 @@ function loadSample() {
     people: "8"
   });
   synchronizeOfficialValues(getDefinition(), state.values, true);
+  if (getDefinition().officialFieldSpec) replaceOfficialXml(getDefinition(), state.values);
   validate();
   render();
 }
@@ -445,7 +491,7 @@ function downloadXml() {
   if (state.validation.length > 0) return;
 
   const definition = getDefinition();
-  const blob = new Blob([buildXml(definition, state.values)], { type: "application/xml" });
+  const blob = new Blob([currentXml(definition)], { type: "application/xml" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -485,6 +531,10 @@ async function importDefinition(event) {
   if (!file) return;
   const text = await file.text();
   try {
+    if (!file.name.toLowerCase().endsWith(".json") && isOfficialR07Instance(text)) {
+      await loadOfficialR07(text, file.name);
+      return;
+    }
     const definition = file.name.toLowerCase().endsWith(".json") ? JSON.parse(text) : definitionFromXml(text);
     applyDefinition(definition, file.name);
   } catch (error) {
@@ -494,17 +544,18 @@ async function importDefinition(event) {
   }
 }
 
-async function loadOfficialR07() {
+async function loadOfficialR07(instanceXml = "", fileName = "令和7年 帳票・XML構造定義・帳票フィールド仕様 / KOA020 Ver23.0") {
   try {
     const response = await fetch("./examples/r07-income-tax-definition.xml");
     if (!response.ok) throw new Error("令和7年帳票定義を読み込めませんでした。");
-    applyDefinition(enhanceOfficialR07Definition(definitionFromXml(await response.text())), "令和7年 帳票・XML構造定義・帳票フィールド仕様 / KOA020 Ver23.0");
+    applyDefinition(enhanceOfficialR07Definition(definitionFromXml(await response.text())), fileName, instanceXml);
   } catch (error) {
     console.error(error);
+    if (instanceXml) alert(error.message);
   }
 }
 
-function applyDefinition(definition, fileName) {
+function applyDefinition(definition, fileName, instanceXml = "") {
   definition = enhanceOfficialR07Definition(definition);
   assertDefinition(definition);
   state.customDefinition = definition;
@@ -517,6 +568,12 @@ function applyDefinition(definition, fileName) {
   });
   state.values.creationDate ||= new Date().toISOString().slice(0, 10);
   synchronizeOfficialValues(definition, state.values);
+  if (definition.officialFieldSpec) {
+    state.xmlText = instanceXml || buildXml(definition, state.values);
+    state.values = extractOfficialR07Values(definition, state.xmlText);
+  } else {
+    state.xmlText = "";
+  }
   state.validation = [];
   state.xsdValidation = { status: "idle", errors: [] };
   state.layoutSources = new Map();

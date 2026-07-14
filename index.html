@@ -81,13 +81,16 @@
                   <strong>正式e-Tax XML</strong>
                   <span>RKO0010 25.0.0 / KOA020 23.0</span>
                 </div>
-                <button type="button" id="copyXml" aria-label="XMLをコピー">Copy</button>
+                <div class="xml-toolbar-actions">
+                  <button type="button" id="applyXmlToForm">XMLを帳票へ反映</button>
+                  <button type="button" id="copyXml" aria-label="XMLをコピー">Copy</button>
+                </div>
               </div>
               <div class="xsd-result" id="xsdResult" role="status" aria-live="polite">
                 <strong>公式XSD: 未検証</strong>
                 <p>「XSD検証」で出力XMLを国税庁の手続ルートXSDに照合します。</p>
               </div>
-              <pre class="xml-preview" id="xmlPreview"></pre>
+              <pre class="xml-preview" id="xmlPreview" contenteditable="true" spellcheck="false" aria-label="編集可能な正式e-Tax XML"></pre>
             </div>
           </section>
         </div>
