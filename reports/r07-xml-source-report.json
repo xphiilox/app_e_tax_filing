@@ -4,6 +4,19 @@
   "sourceOfTruth": "displayedOfficialXml",
   "browserIntegrationCases": [
     {
+      "case": "未入力XMLの仮データ除去",
+      "forbiddenValues": ["未入力", "国税庁", "01101"],
+      "emptyElements": ["zeimusho_CD", "NOZEISHA_ID", "NOZEISHA_NM", "NOZEISHA_ADR"],
+      "status": "pass"
+    },
+    {
+      "case": "入力後の税務署コード・名称整合",
+      "taxOfficeCode": "01101",
+      "taxOfficeName": "麹町",
+      "xsdValid": true,
+      "status": "pass"
+    },
+    {
       "case": "XMLから第一表へのIDREF解決",
       "xmlElement": "NOZEISHA_NM",
       "formField": "r07_19_1",

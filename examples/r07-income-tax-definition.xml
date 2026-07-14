@@ -17,7 +17,7 @@
 
   <section id="identity" label="本人・申告情報">
     <field id="taxpayerId" label="利用者識別番号" path="IT/NOZEISHA_ID" type="text" required="true" pattern="^\d{16}$" hint="e-Taxの16桁の利用者識別番号" />
-    <field id="taxOfficeCode" label="税務署番号" path="IT/ZEIMUSHO/zeimusho_CD" type="text" required="true" pattern="^\d{5}$" value="01101" hint="公式税務署コード（例: 麹町 01101）" />
+    <field id="taxOfficeCode" label="税務署番号" path="IT/ZEIMUSHO/zeimusho_CD" type="text" required="true" pattern="^\d{5}$" hint="公式税務署コード（例: 麹町 01101）" />
     <field id="softwareName" label="作成ソフト名" path="KOA020/@softNM" type="text" required="true" value="e-Tax Filing Designer" />
     <field id="creatorName" label="作成者名" path="KOA020/@sakuseiNM" type="text" required="true" value="本人" />
     <field id="creationDate" label="XML作成日" path="KOA020/@sakuseiDay" type="date" required="true" />

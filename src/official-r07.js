@@ -119,11 +119,13 @@ function parseDate(value) {
 }
 
 function buildRequiredItEntries(values) {
+  const taxOfficeCode = clean(values.taxOfficeCode);
+  const taxOfficeName = clean(values.taxOffice);
   return [
-    compound("ZEIMUSHO", [gen("zeimusho_CD", clean(values.taxOfficeCode) || "00001"), gen("zeimusho_NM", clean(values.taxOffice) || "国税庁")]),
+    compound("ZEIMUSHO", [gen("zeimusho_CD", taxOfficeCode), taxOfficeName && gen("zeimusho_NM", taxOfficeName)].filter(Boolean)),
     simple("NOZEISHA_ID", clean(values.taxpayerId)),
-    simple("NOZEISHA_NM", clean(values.taxpayerName) || "未入力"),
-    simple("NOZEISHA_ADR", clean(values.address) || "未入力"),
+    simple("NOZEISHA_NM", clean(values.taxpayerName)),
+    simple("NOZEISHA_ADR", clean(values.address)),
     compound("TETSUZUKI", [plain("procedure_CD", "RKO0010"), plain("procedure_NM", "所得税及び復興特別所得税申告")])
   ];
 }
